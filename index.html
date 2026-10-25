@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>账单信息科普演示生成器</title>
 <!-- 引入各大 UI 字体 -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --primary: #4f46e5;
@@ -64,7 +64,7 @@
   button.success:hover { background: #059669; }
 
   .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-  .slider-row span { font-size: 11px; color: var(--subtext); width: 30px; text-align: right; }
+  .slider-row span { font-size: 11px; color: var(--subtext); width: 35px; text-align: right; }
   input[type="range"] {
     -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
     background: var(--border); outline: none; flex: 1;
@@ -101,7 +101,7 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>专为演示教学打造 · 自动智能无缝替换</p>
+      <p>专为演示教学打造 · 修复黑块与截断Bug</p>
       <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限教学演示使用。</div>
     </header>
 
@@ -121,6 +121,7 @@
       <select id="fontSel" style="background:#1b1f2a; color:white; padding:8px; border-radius:6px; border:1px solid var(--border);">
         <option value="Inter, sans-serif">Inter (系统 UI 默认)</option>
         <option value="Roboto, sans-serif">Roboto (安卓风)</option>
+        <option value="Roboto Mono, monospace">Roboto Mono (等宽数字)</option>
         <option value="Arial, sans-serif">Arial</option>
       </select>
       <div class="slider-row">
@@ -167,7 +168,7 @@
 
   const state = {
     img: null, W: 0, H: 0,
-    regions: [], // 存放金额、时间、单号三个区域的信息
+    regions: [], 
     text: { amount: '', time: '', orderId: '' },
     font: 'Inter, sans-serif',
     scaleX: 1
@@ -184,23 +185,33 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 深度图像化验分析 =================
+  // ================= 1. 深度图像化验分析 (修复黑块Bug) =================
   function getRealInkBounds(box, data, W, H) {
-    let minX = box.x1, maxX = box.x0, minY = box.y1, maxY = box.y0;
+    // 【核心修复】将浮点坐标转为整数，防止 data 数组越界导致背景色变为 NaN/黑色
+    const bx0 = Math.floor(box.x0);
+    const bx1 = Math.ceil(box.x1);
+    const by0 = Math.floor(box.y0);
+    const by1 = Math.ceil(box.y1);
+
+    let minX = bx1, maxX = bx0, minY = by1, maxY = by0;
     let fgCount = 0;
     
+    // 采样外围背景
     let rSum=0, gSum=0, bSum=0, cnt=0;
     const pad = 10;
-    for(let y=Math.max(0,box.y0-pad); y<Math.min(H,box.y1+pad); y++){
-        for(let x=Math.max(0,box.x0-pad); x<Math.min(W,box.x1+pad); x++){
-            if(x>=box.x0 && x<=box.x1 && y>=box.y0 && y<=box.y1) continue;
-            const i = (y*W+x)*4; rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
+    for(let y=Math.max(0, by0-pad); y<Math.min(H, by1+pad); y++){
+        for(let x=Math.max(0, bx0-pad); x<Math.min(W, bx1+pad); x++){
+            if(x>=bx0 && x<=bx1 && y>=by0 && y<=by1) continue;
+            const i = (y*W+x)*4; 
+            rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
         }
     }
-    const outerBg = cnt > 0 ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
+    // 兜底：确保背景色是正常的 RGB 数值
+    const outerBg = (cnt > 0 && !isNaN(rSum)) ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
 
-    for (let y = Math.max(0, Math.floor(box.y0)); y < Math.min(H, box.y1); y++) {
-      for (let x = Math.max(0, Math.floor(box.x0)); x < Math.min(W, box.x1); x++) {
+    // 寻找墨迹边界
+    for (let y = Math.max(0, by0); y < Math.min(H, by1); y++) {
+      for (let x = Math.max(0, bx0); x < Math.min(W, bx1); x++) {
         const i = (y * W + x) * 4;
         const r = data[i], g = data[i+1], b = data[i+2];
         const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
@@ -217,6 +228,7 @@
     const realW = Math.max(1, maxX - minX);
     const realH = Math.max(1, maxY - minY);
     
+    // 提取前景文字色
     const fgPixels = [];
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -258,10 +270,12 @@
     state.regions.forEach((box, idx) => {
       if (!box) return;
       const text = state.text[box.type];
-      if (!text) return; // 如果没填就不覆盖
+      if (!text) return; 
 
-      // 覆盖原图
-      ctx.fillStyle = `rgb(${box.bg.map(v=>Math.round(v)).join(',')})`;
+      // 覆盖原图 (使用保护机制防止 NaN)
+      const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
+      ctx.fillStyle = `rgb(${bgStr})`;
+      
       const coverPadX = Math.max(2, box.w * 0.05);
       const coverPadY = Math.max(2, box.h * 0.15);
       ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX*2, box.h + coverPadY*2);
@@ -283,7 +297,8 @@
       }
 
       ctx.font = `500 ${finalFontSize}px ${state.font}`;
-      ctx.fillStyle = `rgb(${box.fg.join(',')})`;
+      const fgStr = box.fg.map(v => isNaN(v) ? 0 : Math.round(v)).join(',');
+      ctx.fillStyle = `rgb(${fgStr})`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
 
@@ -304,7 +319,7 @@
       ctx.fillText(text, startX, centerY + yOffset);
       ctx.restore();
 
-      // 绘制高亮框 (方便老师知道这行被选中了)
+      // 绘制高亮框
       if (isDragging && idx === activeRegionIndex) {
         ctx.strokeStyle = '#4f46e5';
         ctx.lineWidth = 2;
@@ -313,7 +328,7 @@
     });
   }
 
-  // ================= 3. 智能识别与分类 =================
+  // ================= 3. 智能识别与分类 (合并长文本) =================
   async function runOCR() {
     const os = Math.min(1.5, 1600 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
@@ -337,32 +352,52 @@
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
+    // 1. 提取所有单词并按行合并（解决时间和单号被截断的问题）
+    const rawWords = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30).map(w => ({
+      x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
+      x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
+      text: w.text.replace(/\s/g, '')
+    })).sort((a,b) => a.y0 - b.y0 || a.x0 - b.x0);
+
+    const mergedBoxes = [];
+    for (const w of rawWords) {
+      let merged = false;
+      for (const m of mergedBoxes) {
+        // 如果垂直方向有重叠，且水平方向距离相近，则合并为同一个文本框
+        const overlapY = Math.min(m.y1, w.y1) - Math.max(m.y0, w.y0);
+        if (overlapY > Math.min(m.y1-m.y0, w.y1-w.y0) * 0.5) {
+            m.x1 = Math.max(m.x1, w.x1);
+            m.y0 = Math.min(m.y0, w.y0);
+            m.y1 = Math.max(m.y1, w.y1);
+            m.text += w.text;
+            merged = true;
+            break;
+        }
+      }
+      if (!merged) mergedBoxes.push({ ...w });
+    }
+
     let amountBox = null, timeBox = null, orderBox = null;
     let maxAmountArea = 0, maxOrderWidth = 0;
 
-    // 遍历所有识别块，用启发式规则分类
-    (data.words || []).forEach(w => {
-      if (!w.text.trim() || w.confidence < 30) return;
-      
-      const text = w.text.replace(/\s/g, '');
-      const box = {
-        x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
-        x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
-        w: (w.bbox.x1 - w.bbox.x0) * sc, h: (w.bbox.y1 - w.bbox.y0) * sc
-      };
+    // 2. 对合并后的文本框进行分类
+    mergedBoxes.forEach(box => {
+      const text = box.text;
+      const w = box.x1 - box.x0;
+      const h = box.y1 - box.y0;
 
-      // 1. 判断金额：高度最大的，且包含 + 或 . 或数字
-      if (/\d/.test(text) && (text.includes('.') || text.includes('+')) && !text.includes('-')) {
-        const area = box.w * box.h;
+      // 金额：高度最大，且有小数点或加号
+      if (/\d/.test(text) && (text.includes('.') || text.includes('+'))) {
+        const area = w * h;
         if (area > maxAmountArea) { maxAmountArea = area; amountBox = box; }
       } 
-      // 2. 判断时间：包含 - 或 : 且有一定长度
-      else if (text.includes('-') || text.includes(':')) {
-        if (!timeBox || box.w > timeBox.w) timeBox = box;
+      // 时间：包含 : 或 - 
+      else if (text.includes(':') || text.includes('-')) {
+        if (!timeBox || w > (timeBox.x1 - timeBox.x0)) timeBox = box;
       } 
-      // 3. 判断单号：纯数字，非常长
-      else if (/^\d{15,}$/.test(text)) {
-         if (box.w > maxOrderWidth) { maxOrderWidth = box.w; orderBox = box; }
+      // 订单号：极其长（超过12位数字）
+      else if (/^\d{12,}$/.test(text)) {
+         if (w > maxOrderWidth) { maxOrderWidth = w; orderBox = box; }
       }
     });
 
@@ -370,19 +405,19 @@
     const regions = [];
 
     if (amountBox) {
-      const box = getRealInkBounds(amountBox, imgData, state.W, state.H);
-      box.type = 'amount'; box.offsetX = 0; box.offsetY = 0;
-      regions.push(box);
+      const b = getRealInkBounds(amountBox, imgData, state.W, state.H);
+      b.type = 'amount'; b.offsetX = 0; b.offsetY = 0;
+      regions.push(b);
     }
     if (timeBox) {
-      const box = getRealInkBounds(timeBox, imgData, state.W, state.H);
-      box.type = 'time'; box.offsetX = 0; box.offsetY = 0;
-      regions.push(box);
+      const b = getRealInkBounds(timeBox, imgData, state.W, state.H);
+      b.type = 'time'; b.offsetX = 0; b.offsetY = 0;
+      regions.push(b);
     }
     if (orderBox) {
-      const box = getRealInkBounds(orderBox, imgData, state.W, state.H);
-      box.type = 'orderId'; box.offsetX = 0; box.offsetY = 0;
-      regions.push(box);
+      const b = getRealInkBounds(orderBox, imgData, state.W, state.H);
+      b.type = 'orderId'; b.offsetX = 0; b.offsetY = 0;
+      regions.push(b);
     }
 
     return regions;
@@ -413,15 +448,8 @@
       try {
         state.regions = await runOCR();
         
-        // 自动回填输入框
-        state.regions.forEach(r => {
-           if (r.type === 'amount' && !state.text.amount) {
-               // 默认给一个金额演示
-               state.text.amount = '+8,888.88'; 
-           }
-        });
-        
-        // 给老师准备好默认填充
+        // 默认填充
+        if (state.regions.find(r => r.type === 'amount') && !state.text.amount) state.text.amount = '+8,888.88';
         if (state.regions.find(r => r.type === 'time') && !state.text.time) state.text.time = '2026-06-18 12:00:00';
         if (state.regions.find(r => r.type === 'orderId') && !state.text.orderId) state.text.orderId = '20260618200040011100410007156705';
 
@@ -445,27 +473,16 @@
     im.src = url;
   }
 
-  $('uploadBtn').onclick = () => fileInput.click();
-  emptyEl.onclick = () => fileInput.click();
-  fileInput.onchange = e => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
-    fileInput.value = '';
-  };
-
-  // 随机生成
   generateBtn.onclick = () => {
     if (!state.img) return alert("请先上传图片！");
     
-    // 随机金额
     const money = (Math.random() * 9000 + 100).toFixed(2);
     const amountStr = `+${Number(money).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     
-    // 随机时间 (最近几天)
     const d = new Date(Date.now() - Math.random() * 100000000);
     const p = n => n.toString().padStart(2, '0');
     const timeStr = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
-    // 随机单号 (25位)
     let orderStr = d.getFullYear().toString() + p(d.getMonth()+1) + p(d.getDate());
     while (orderStr.length < 28) orderStr += Math.floor(Math.random() * 10);
     
@@ -481,6 +498,13 @@
     showToast('✅ 演示数据已生成');
   };
 
+  $('uploadBtn').onclick = () => fileInput.click();
+  emptyEl.onclick = () => fileInput.click();
+  fileInput.onchange = e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+    fileInput.value = '';
+  };
+
   inputAmount.oninput = e => { state.text.amount = e.target.value; renderResult(); };
   inputTime.oninput = e => { state.text.time = e.target.value; renderResult(); };
   inputOrderId.oninput = e => { state.text.orderId = e.target.value; renderResult(); };
@@ -488,14 +512,13 @@
   fontSel.onchange = e => { state.font = e.target.value; renderResult(); };
   scaleXRange.oninput = e => { state.scaleX = parseInt(e.target.value)/100; $('scaleXVal').textContent = e.target.value + '%'; renderResult(); };
 
-  // 鼠标拖拽微调区域位置（偶尔会有点偏）
+  // 鼠标拖拽微调区域位置
   canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (state.W / rect.width);
     const my = (e.clientY - rect.top) * (state.H / rect.height);
 
-    // 找出点中了哪个区域
     activeRegionIndex = -1;
     state.regions.forEach((box, i) => {
         if (mx >= box.x0 && mx <= box.x1 && my >= box.y0 && my <= box.y1) {
@@ -540,7 +563,6 @@
     }, 'image/png');
   };
 
-  // 拖拽上传
   ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => {
     e.preventDefault(); stage.style.border = '2px dashed #4f46e5';
   }));
