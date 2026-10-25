@@ -23,7 +23,6 @@
     -webkit-font-smoothing: antialiased;
   }
   .app { display: flex; height: 100vh; }
-
   .panel {
     width: 380px; flex: none; padding: 24px 20px;
     background: var(--panel); border-right: 1px solid var(--border);
@@ -31,23 +30,22 @@
   }
   .brand h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
   .brand p { font-size: 12px; color: var(--subtext); margin-top: 4px; }
-  
+
   .warning {
     font-size: 11px; color: #f87171; background: rgba(248, 113, 113, 0.1);
     padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(248, 113, 113, 0.2);
     line-height: 1.5; margin-top: 5px;
   }
-
   .group { display: flex; flex-direction: column; gap: 8px; }
   .glabel { font-size: 12px; color: var(--subtext); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-  
+
   input[type="text"] {
     background: #1b1f2a; border: 1px solid var(--border); color: #fff;
     border-radius: 8px; padding: 10px 14px; font-size: 14px; width: 100%; outline: none;
     font-family: inherit; transition: 0.2s;
   }
   input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
-  
+
   button.primary {
     padding: 12px; border-radius: 10px; border: none; cursor: pointer;
     background: var(--primary); color: #fff; font-size: 14px; font-weight: 600;
@@ -55,13 +53,12 @@
   }
   button.primary:hover:not(:disabled) { background: var(--primary-hover); }
   button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  
+
   button.success {
     background: var(--success); font-size: 15px; padding: 14px;
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
   }
   button.success:hover { background: #059669; }
-
   .stage {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
     padding: 20px; position: relative; overflow: hidden;
@@ -75,7 +72,7 @@
     transition: 0.3s; background: rgba(22, 25, 32, 0.5);
   }
   .empty:hover { border-color: var(--primary); color: #fff; background: rgba(79, 70, 229, 0.05); }
-  
+
   #toast {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
     background: var(--success); color: #fff; padding: 8px 16px; border-radius: 20px;
@@ -89,12 +86,10 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>基准线对齐 · 屏蔽状态栏 · 智能兜底替换</p>
-      <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
+      <p>行级合并识别 · 标签保护擦除 · 基线精准对齐</p>
+      <div class="warning">严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
     </header>
-
     <button class="primary" id="uploadBtn">1. 上传原始账单截图</button>
-
     <div class="group">
       <div class="glabel">2. 修改核心信息 (实时预览)</div>
       <input type="text" id="inputAmount" placeholder="金额" spellcheck="false">
@@ -103,33 +98,27 @@
       <input type="text" id="inputName" placeholder="顶部及对方名字" spellcheck="false">
       <input type="text" id="inputAccount" placeholder="对方账户 (只需填邮箱部分)" spellcheck="false">
     </div>
-
-    <button class="primary success" id="generateBtn">✨ 一键全套随机生成</button>
-
+    <button class="primary success" id="generateBtn">一键全套随机生成</button>
     <div class="group" style="margin-top:auto; padding-top:20px">
       <div class="glabel">手动微调 (如果识别有偏差)</div>
-      <p style="font-size:11px; color:var(--subtext); margin-bottom:5px;">在右侧画布上点击数字即可选中，并可用键盘方向键微调位置。</p>
+      <p style="font-size:11px; color:var(--subtext); margin-bottom:5px;">在右侧画布上点击文字即可选中，拖拽或用键盘方向键微调位置。</p>
       <button class="primary" id="downloadBtn" disabled style="background:#2a2f3d;">下载修改后的图片</button>
     </div>
   </aside>
-
   <main class="stage" id="stage">
-    <div id="toast">✅ 演示数据已生成</div>
+    <div id="toast">演示数据已生成</div>
     <div class="empty" id="empty">
-      <div style="font-size:48px;margin-bottom:12px">📱</div>
+      <div style="font-size:48px;margin-bottom:12px">点击上传</div>
       <div>点击上传账单截图，自动提取核心信息</div>
     </div>
     <canvas id="cv" tabindex="0"></canvas>
   </main>
 </div>
-
 <input type="file" id="fileInput" accept="image/*" hidden>
-
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
 (function () {
   'use strict';
-
   const $ = id => document.getElementById(id);
   const canvas = $('cv');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -144,14 +133,12 @@
   const generateBtn = $('generateBtn');
   const downloadBtn = $('downloadBtn');
   const toast = $('toast');
-
   const state = {
     img: null, W: 0, H: 0,
-    regions: [], 
-    baseX: 0, // 统一左对齐的基准线
+    regions: [],
+    baseX: 0,
     text: { amount: '', time: '', orderId: '', name: '', account: '' },
   };
-
   let worker = null;
   let activeRegionIndex = -1;
   let isDragging = false;
@@ -163,162 +150,199 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 图像化验分析 =================
-  function analyzeRegion(box, data, W, H) {
-    const bx0 = Math.floor(box.x0);
-    const bx1 = Math.ceil(box.x1);
-    const by0 = Math.floor(box.y0);
-    const by1 = Math.ceil(box.y1);
-
-    let minX = bx1, maxX = bx0, minY = by1, maxY = by0;
-    let fgCount = 0;
-    
-    let rSum=0, gSum=0, bSum=0, cnt=0;
-    const pad = 15;
-    for(let y=Math.max(0, by0-pad); y<Math.min(H, by1+pad); y++){
-        for(let x=Math.max(0, bx0-pad); x<Math.min(W, bx1+pad); x++){
-            if(x>=bx0 && x<=bx1 && y>=by0 && y<=by1) continue;
-            const i = (y*W+x)*4; 
-            rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
-        }
+  // ========== 工具：背景中值采样（抗锯齿鲁棒） ==========
+  function sampleBackgroundMedian(bx0, bx1, by0, by1, data, W, H, pad) {
+    const rArr = [], gArr = [], bArr = [];
+    const x0 = Math.max(0, bx0 - pad), x1 = Math.min(W, bx1 + pad);
+    const y0 = Math.max(0, by0 - pad), y1 = Math.min(H, by1 + pad);
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        if (x >= bx0 && x <= bx1 && y >= by0 && y <= by1) continue;
+        const i = (y * W + x) * 4;
+        rArr.push(data[i]); gArr.push(data[i+1]); bArr.push(data[i+2]);
+      }
     }
-    const outerBg = (cnt > 0 && !isNaN(rSum)) ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
+    if (rArr.length === 0) return [255, 255, 255];
+    const mid = arr => {
+      const s = arr.slice().sort((a,b)=>a-b);
+      return s[Math.floor(s.length/2)];
+    };
+    return [mid(rArr), mid(gArr), mid(bArr)];
+  }
 
+  // ========== 工具：前景色采样（差异最大的前15%像素均值） ==========
+  function sampleForeground(inkX0, inkX1, inkY0, inkY1, data, W, H, bg) {
+    const fg = [];
+    for (let y = inkY0; y <= inkY1; y++) {
+      for (let x = inkX0; x <= inkX1; x++) {
+        const i = (y * W + x) * 4;
+        const r=data[i], g=data[i+1], b=data[i+2];
+        const diff = Math.abs(r-bg[0]) + Math.abs(g-bg[1]) + Math.abs(b-bg[2]);
+        if (diff > 40) fg.push({d: diff, r, g, b});
+      }
+    }
+    if (fg.length === 0) return [20, 20, 20];
+    fg.sort((a,b) => b.d - a.d);
+    const topN = Math.max(1, Math.floor(fg.length * 0.15));
+    let r=0,g=0,b=0;
+    for (let i=0;i<topN;i++){ r+=fg[i].r; g+=fg[i].g; b+=fg[i].b; }
+    return [Math.round(r/topN), Math.round(g/topN), Math.round(b/topN)];
+  }
+
+  // ========== 1. 区域化验分析（精确墨迹边界 + 中值背景） ==========
+  function analyzeRegion(box, data, W, H) {
+    const bx0 = Math.floor(box.x0), bx1 = Math.ceil(box.x1);
+    const by0 = Math.floor(box.y0), by1 = Math.ceil(box.y1);
+    const bg = sampleBackgroundMedian(bx0, bx1, by0, by1, data, W, H, 12);
+    let minX = bx1, maxX = bx0, minY = by1, maxY = by0, fgCount = 0;
     for (let y = Math.max(0, by0); y < Math.min(H, by1); y++) {
       for (let x = Math.max(0, bx0); x < Math.min(W, bx1); x++) {
         const i = (y * W + x) * 4;
-        const r = data[i], g = data[i+1], b = data[i+2];
-        const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
-        if (diff > 40) { 
+        const r=data[i], g=data[i+1], b=data[i+2];
+        const diff = Math.abs(r-bg[0]) + Math.abs(g-bg[1]) + Math.abs(b-bg[2]);
+        if (diff > 40) {
           fgCount++;
-          if (x < minX) minX = x; if (x > maxX) maxX = x;
-          if (y < minY) minY = y; if (y > maxY) maxY = y;
+          if (x<minX) minX=x; if (x>maxX) maxX=x;
+          if (y<minY) minY=y; if (y>maxY) maxY=y;
         }
       }
     }
-
-    if (fgCount < 10) return { ...box, inkH: by1-by0, inkW: bx1-bx0, inkX0: bx0, inkY0: by0, fg: [0,0,0], bg: outerBg };
-
-    const fgPixels = [];
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        const i = (y * W + x) * 4;
-        const r = data[i], g = data[i+1], b = data[i+2];
-        const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
-        if (diff > 40) fgPixels.push({ d: diff, r, g, b });
-      }
+    if (fgCount < 10) {
+      return { ...box, inkH: by1-by0, inkW: bx1-bx0, inkX0: bx0, inkY0: by0,
+               inkX1: bx1, inkY1: by1, fg: [20,20,20], bg,
+               eraseX: bx0, eraseY: by0, eraseW: bx1-bx0, eraseH: by1-by0 };
     }
-    fgPixels.sort((a, b) => b.d - a.d);
-    let fg = [0,0,0];
-    if(fgPixels.length>0){
-        const topN = Math.max(1, Math.floor(fgPixels.length * 0.15)); 
-        let r=0,g=0,b=0; for(let i=0;i<topN;i++){ r+=fgPixels[i].r; g+=fgPixels[i].g; b+=fgPixels[i].b; }
-        fg = [Math.round(r/topN), Math.round(g/topN), Math.round(b/topN)];
-    }
-
+    const fg = sampleForeground(minX, maxX, minY, maxY, data, W, H, bg);
     return {
       inkX0: minX, inkY0: minY, inkX1: maxX, inkY1: maxY,
       inkW: Math.max(1, maxX - minX), inkH: Math.max(1, maxY - minY),
       eraseX: bx0, eraseY: by0, eraseW: bx1 - bx0, eraseH: by1 - by0,
-      fg, bg: outerBg
+      fg, bg
     };
   }
 
-  // ================= 2. 渲染引擎 =================
+  // ========== 2. 行合并：OCR 常把一行拆成多个词块，按 y 聚类合并 ==========
+  function mergeWordsByLine(words) {
+    const lines = [];
+    words.forEach(w => {
+      const cy = (w.y0 + w.y1) / 2;
+      let merged = false;
+      for (const line of lines) {
+        if (Math.abs(line.cy - cy) < line.maxH * 0.7) {
+          line.words.push(w);
+          line.cy = (line.cy * (line.words.length - 1) + cy) / line.words.length;
+          line.maxH = Math.max(line.maxH, w.h);
+          merged = true; break;
+        }
+      }
+      if (!merged) lines.push({ cy, maxH: w.h, words: [w] });
+    });
+    return lines.map(line => {
+      const sorted = line.words.sort((a,b) => a.x0 - b.x0);
+      return {
+        x0: sorted[0].x0,
+        y0: Math.min(...sorted.map(w => w.y0)),
+        x1: sorted[sorted.length-1].x1,
+        y1: Math.max(...sorted.map(w => w.y1)),
+        w: sorted[sorted.length-1].x1 - sorted[0].x0,
+        h: Math.max(...sorted.map(w => w.h)),
+        text: sorted.map(w => w.text).join(''),
+        parts: sorted
+      };
+    });
+  }
+
+  // ========== 3. 渲染引擎（精准擦除 + 基线对齐 + 字体匹配） ==========
   function renderResult() {
     if (!state.img) return;
     const W = state.W, H = state.H;
-
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(state.img, 0, 0, W, H);
+    // 数字优先 Helvetica Neue（最接近支付宝数字字体），中文回退苹方/雅黑
+    const fontFam = `'Helvetica Neue', 'Arial', 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif`;
 
-    const fontFam = `"PingFang SC", "Microsoft YaHei", "Inter", sans-serif`;
-
-    // 计算全局基准高度（统一时间、订单号、账户的字体大小）
+    // 全局基准字号：time/orderId/account 统一为三者中最大墨迹高度
     let baseInkH = 0;
     state.regions.forEach(box => {
-        if (['time', 'orderId', 'account'].includes(box.type)) {
-            if (box.inkH > baseInkH) baseInkH = box.inkH;
-        }
+      if (['time','orderId','account'].includes(box.type) && box.inkH > baseInkH) baseInkH = box.inkH;
     });
-    if (baseInkH === 0) baseInkH = 20;
+    if (baseInkH === 0) baseInkH = Math.round(W * 0.035);
 
     state.regions.forEach((box, idx) => {
       let text = state.text[box.type];
-      if (!text) return; 
+      if (!text) return;
 
-      // 账户行拼合
+      // 账户行 = 纯名字 + 空格 + 邮箱部分
       if (box.type === 'account') {
-          const pureName = state.text.name.replace(' >', '').trim(); 
-          text = `${pureName} ${text}`;
+        const pureName = state.text.name.replace(/\s*>$/, '').trim();
+        text = `${pureName} ${text}`;
       }
 
-      // 1. 强力擦除
-      const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
-      ctx.fillStyle = `rgb(${bgStr})`;
-      
-      // 控制擦除边界
-      let padX = 10; // 普通左右擦除
-      let startEraseX = box.eraseX - padX;
-      
-      // 如果是在写时间、单号、账户，从基准线开始擦除，确保彻底吃掉左边的标签尾巴
-      if (['time', 'orderId', 'account'].includes(box.type)) {
-          startEraseX = state.baseX - 15; 
+      // ---- 3.1 无痕擦除 ----
+      const bg = box.bg.map(v => isNaN(v) ? 255 : Math.round(v));
+      ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+
+      let eraseL, eraseR;
+      const padY = Math.max(3, Math.round(box.eraseH * 0.3));
+
+      if (['time','orderId','account'].includes(box.type)) {
+        // 左对齐行：从基准线左缘擦起（仅留 2px 抗锯齿余量，绝不触碰左侧标签）
+        eraseL = state.baseX - 2;
+        // 右边界：取原内容右缘与新文本预估宽度的最大值
+        ctx.font = `400 100px ${fontFam}`;
+        const estW = ctx.measureText(text).width * (baseInkH / 100) * 1.1;
+        eraseR = Math.max(box.eraseX + box.eraseW + 8, eraseL + estW + 10);
+      } else {
+        // 居中行（金额/姓名）：擦除原墨迹范围并适当放宽
+        eraseL = box.inkX0 - Math.round(box.inkW * 0.15) - 4;
+        eraseR = box.inkX1 + Math.round(box.inkW * 0.15) + 4;
       }
+      ctx.fillRect(eraseL, box.eraseY - padY, eraseR - eraseL, box.eraseH + padY * 2);
 
-      const padY = 8; // 上下多擦一点
-      ctx.fillRect(startEraseX, box.eraseY - padY, (box.eraseX + box.eraseW + padX) - startEraseX, box.eraseH + padY*2);
-
-      // 2. 设定字号
+      // ---- 3.2 字号计算（基于原墨迹高度等比缩放） ----
       let weight = 400;
-      if (box.type === 'amount') weight = 600; 
-      
+      if (box.type === 'amount') weight = 700;
+      else if (box.type === 'name') weight = 500;
+
       let targetH = box.inkH;
-      if (['time', 'orderId', 'account'].includes(box.type)) {
-          targetH = baseInkH; 
-      }
+      if (['time','orderId','account'].includes(box.type)) targetH = baseInkH;
 
       ctx.font = `${weight} 100px ${fontFam}`;
-      const metrics = ctx.measureText(text);
-      const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-      let finalFontSize = rawH > 0 ? (targetH / rawH) * 100 : 100;
-      
-      // 防溢出限制
-      ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
-      const textWidth = ctx.measureText(text).width;
-      // 如果文字太长，就压缩一下
-      let maxWidth = W - state.baseX - 40; 
-      if (textWidth > maxWidth) {
-          finalFontSize = finalFontSize * (maxWidth / textWidth);
+      const m100 = ctx.measureText(text);
+      const rawH = m100.actualBoundingBoxAscent + m100.actualBoundingBoxDescent;
+      let fontSize = rawH > 0 ? (targetH / rawH) * 100 : targetH * 2;
+
+      // 防溢出：若文本过宽则等比压缩
+      ctx.font = `${weight} ${fontSize}px ${fontFam}`;
+      let tw = ctx.measureText(text).width;
+      const maxW = (box.type === 'amount' || box.type === 'name')
+        ? W * 0.7
+        : W - state.baseX - 40;
+      if (tw > maxW) {
+        fontSize = fontSize * (maxW / tw) * 0.98;
+        ctx.font = `${weight} ${fontSize}px ${fontFam}`;
+        tw = ctx.measureText(text).width;
       }
 
-      // 3. 画字
-      ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
-      const fgStr = box.fg.map(v => isNaN(v) ? 0 : Math.round(v)).join(',');
-      ctx.fillStyle = `rgb(${fgStr})`;
+      // ---- 3.3 绘制（垂直基线精准对齐） ----
+      const fg = box.fg.map(v => isNaN(v) ? 20 : Math.round(v));
+      ctx.fillStyle = `rgb(${fg[0]},${fg[1]},${fg[2]})`;
       ctx.textBaseline = 'middle';
 
-      // 金额、名字居中
+      let startX, centerY;
       if (box.type === 'amount' || box.type === 'name') {
-          ctx.textAlign = 'center';
+        ctx.textAlign = 'center';
+        startX = box.inkX0 + box.inkW / 2 + (box.offsetX || 0);
       } else {
-          ctx.textAlign = 'left';
+        ctx.textAlign = 'left';
+        startX = state.baseX + (box.offsetX || 0);
       }
+      // 垂直中心 = 原墨迹垂直中心。textBaseline=middle 时该 y 即文字中心，无需额外偏移
+      centerY = box.inkY0 + box.inkH / 2 + (box.offsetY || 0);
 
-      const centerY = box.inkY0 + box.inkH / 2 + (box.offsetY || 0);
-      
-      // 左对齐的起点，强制卡在基准线上
-      let startX = state.baseX + (box.offsetX || 0);
-      
-      // 居中的计算
-      if (ctx.textAlign === 'center') {
-          startX = box.inkX0 + box.inkW / 2 + (box.offsetX || 0);
-      }
+      ctx.fillText(text, startX, centerY);
 
-      const yOffset = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
-      
-      ctx.fillText(text, startX, centerY + yOffset);
-
+      // 选中高亮框
       if (idx === activeRegionIndex) {
         ctx.strokeStyle = '#4f46e5';
         ctx.lineWidth = 2;
@@ -327,14 +351,14 @@
     });
   }
 
-  // ================= 3. 智能提取 (核心修改) =================
+  // ========== 4. 智能提取（行级合并 + 位置硬约束 + 标签保护） ==========
   async function runOCR() {
     const os = Math.min(1.5, 1600 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
     oc.width = Math.round(state.W * os);
     oc.height = Math.round(state.H * os);
     const octx = oc.getContext('2d');
-    octx.filter = 'contrast(1.2) grayscale(1)';
+    octx.filter = 'contrast(1.25) grayscale(1)';
     octx.drawImage(state.img, 0, 0, oc.width, oc.height);
 
     if (!worker) {
@@ -348,155 +372,180 @@
         }
       });
     }
-
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    // 收集词块
-    const validWords = (data.words || []).filter(w => {
-        // 过滤掉过长或过短的无效噪声
-        return w.text.trim().length > 0 && w.confidence > 30;
-    }).map(w => ({
-        x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
-        x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
-        w: (w.bbox.x1 - w.bbox.x0) * sc,
-        h: (w.bbox.y1 - w.bbox.y0) * sc,
-        text: w.text.replace(/\s/g, '')
+    const validWords = (data.words || []).filter(w =>
+      w.text.trim().length > 0 && w.confidence > 25
+    ).map(w => ({
+      x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
+      x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
+      w: (w.bbox.x1 - w.bbox.x0) * sc,
+      h: (w.bbox.y1 - w.bbox.y0) * sc,
+      text: w.text.replace(/\s/g, '')
     }));
 
+    // 过滤顶部状态栏 + 导航栏（前 15% 高度）
+    const filteredWords = validWords.filter(w => w.y0 > state.H * 0.15);
+
+    // 行合并（关键修复：OCR 常把长数字/日期拆成多块）
+    const lines = mergeWordsByLine(filteredWords);
+
     let amountBox = null, timeBox = null, orderBox = null, accountBox = null, nameBox = null;
+    let labelMaxX1 = 0; // 标签列右边缘（用于校准 baseX，保护标签不被擦除）
+    const labelKeywords = ['创建','时间','收款','理由','对方','账户','订单','单号','备注','分类','标签'];
 
-    // 核心改进1：剔除顶部状态栏区域（y0 < 高度 12% 的词直接忽略）
-    const filteredWords = validWords.filter(w => w.y0 > state.H * 0.12);
-
-    // 识别主体
-    filteredWords.forEach(w => {
-        if (w.text.includes('@') || w.text.includes('*')) {
-            if (!accountBox || w.w > accountBox.w) accountBox = w;
-        }
-        else if (/^\d{15,}$/.test(w.text)) {
-            if (!orderBox || w.w > orderBox.w) orderBox = w;
-        }
-        else if (w.text.includes('+') || w.text.includes('.')) {
-            if (w.h > 20 && (!amountBox || w.w * w.h > amountBox.w * amountBox.h)) amountBox = w;
-        }
-        else if (w.text.includes(':') || w.text.includes('-')) {
-            // 找时间：包含 : 和 - 的，且在金额下方
-            if (amountBox && w.y0 > amountBox.y0) {
-                if (!timeBox || w.w > timeBox.w) timeBox = w;
-            } else if (!amountBox) {
-                if (!timeBox || w.w > timeBox.w) timeBox = w;
-            }
-        }
+    // ---- 金额：含 + 或 . 且字号最大 ----
+    lines.forEach(line => {
+      if ((line.text.includes('+') || line.text.includes('.')) && line.h > 20) {
+        const area = line.w * line.h;
+        if (!amountBox || area > amountBox.w * amountBox.h) amountBox = line;
+      }
     });
 
-    // 强制兜底：如果没找到时间或订单号，通过相对坐标硬核推算
-    if (amountBox) {
-        // 如果没时间，强行在金额下方第一行生成一个框
-        if (!timeBox) {
-            timeBox = {
-                x0: amountBox.x0 - 30, // 假设左边是标签
-                y0: amountBox.y1 + amountBox.h * 0.8,
-                x1: amountBox.x0 + state.W * 0.6,
-                y1: amountBox.y1 + amountBox.h * 1.6
-            };
-        }
-        // 如果没单号，强行在账户下方或时间下方找
-        if (!orderBox) {
-            const refY = accountBox ? accountBox.y1 : (timeBox ? timeBox.y1 : amountBox.y1);
-            orderBox = {
-                x0: timeBox ? timeBox.x0 : amountBox.x0,
-                y0: refY + refY * 0.1,
-                x1: timeBox ? timeBox.x1 : amountBox.x0 + state.W * 0.6,
-                y1: refY + refY * 0.25
-            };
-        }
-    }
+    const amountY1 = amountBox ? amountBox.y1 : state.H * 0.3;
 
-    // 找顶部名字
-    if (amountBox) {
-        let minDist = 9999;
-        filteredWords.forEach(w => {
-            if (w.y1 < amountBox.y0 && w.x0 > amountBox.x0 - 80 && w.x1 < amountBox.x1 + 80) {
-                const dist = amountBox.y0 - w.y1;
-                if (dist < 120 && dist < minDist && w.h > 10 && w.h < amountBox.h * 0.8) {
-                    minDist = dist;
-                    nameBox = w;
-                }
-            }
+    // ---- 在金额下方区域识别各信息行 ----
+    const belowAmount = lines.filter(l => l.y0 > amountY1);
+
+    belowAmount.forEach(line => {
+      const t = line.text;
+      // 标签检测基于单个词块（parts），记录标签列右边缘；整行仍继续参与内容识别
+      if (line.parts) {
+        line.parts.forEach(p => {
+          if (labelKeywords.some(k => p.text.includes(k))) {
+            labelMaxX1 = Math.max(labelMaxX1, p.x1);
+          }
         });
+      }
+      // 账户：含 @ 或 *
+      if (t.includes('@') || t.includes('*')) {
+        if (!accountBox || line.w > accountBox.w) accountBox = line;
+        return;
+      }
+      // 订单号：纯数字（允许 OCR 把 0/1 误识别为 O/I/l）>=15 位
+      const digitsOnly = t.replace(/[OIlSz]/g, ch => ({O:'0',I:'1',l:'1',S:'5',z:'2'}[ch]));
+      if (/^\d{15,}$/.test(digitsOnly)) {
+        if (!orderBox || line.w > orderBox.w) orderBox = line;
+        return;
+      }
+      // 时间：含 : 和 -，且在金额下方（硬约束，杜绝顶部状态栏误识别）
+      if (t.includes(':') && (t.includes('-') || t.includes('/'))) {
+        // 优先选择含完整年份（4位数字开头）的行
+        const hasFullDate = /^\d{4}[-/]/.test(t);
+        if (!timeBox || (hasFullDate && !timeBox._full) ||
+            (hasFullDate === !!timeBox._full && line.w > timeBox.w)) {
+          timeBox = { ...line, _full: hasFullDate };
+        }
+      }
+    });
+
+    // ---- 兜底：位置硬推算（基于金额和已识别行） ----
+    if (amountBox) {
+      if (!timeBox) {
+        timeBox = {
+          x0: state.W * 0.28, y0: amountBox.y1 + amountBox.h * 1.2,
+          x1: state.W * 0.75, y1: amountBox.y1 + amountBox.h * 2.2,
+          w: state.W * 0.47, h: amountBox.h * 0.45, text: ''
+        };
+      }
+      if (!orderBox) {
+        const refY = accountBox ? accountBox.y1 : timeBox.y1;
+        orderBox = {
+          x0: timeBox.x0, y0: refY + timeBox.h * 1.5,
+          x1: state.W * 0.95, y1: refY + timeBox.h * 2.5,
+          w: state.W * 0.6, h: timeBox.h, text: ''
+        };
+      }
+      if (!accountBox) {
+        accountBox = {
+          x0: timeBox.x0, y0: timeBox.y1 + timeBox.h * 1.5,
+          x1: state.W * 0.8, y1: timeBox.y1 + timeBox.h * 2.5,
+          w: state.W * 0.5, h: timeBox.h, text: ''
+        };
+      }
     }
 
-    // 提取基准 X 坐标
-    // 账单中的 时间/理由/账户/单号 都是左侧对齐的。
-    // 我们选择时间框的左侧，或者账户框的左侧作为统一基准。
-    state.baseX = state.W * 0.25; // 默认基准
-    if (timeBox) {
-        // 找到原图中时间的真实墨迹左边缘
-        const analyzedT = analyzeRegion(timeBox, ctx.getImageData(0,0,state.W,state.H).data, state.W, state.H);
-        state.baseX = analyzedT.inkX0;
-    } else if (accountBox) {
-        state.baseX = accountBox.x0;
+    // ---- 顶部姓名（金额上方、居中的小字） ----
+    if (amountBox) {
+      let best = null, bestDist = 9999;
+      lines.forEach(line => {
+        if (line.y1 < amountBox.y0 && line.h < amountBox.h * 0.7 && line.h > 8) {
+          // 与金额水平中心接近
+          const lineCx = (line.x0 + line.x1) / 2;
+          const amtCx = (amountBox.x0 + amountBox.x1) / 2;
+          if (Math.abs(lineCx - amtCx) < amountBox.w * 0.6) {
+            const dist = amountBox.y0 - line.y1;
+            if (dist < amountBox.h * 2.5 && dist < bestDist) {
+              bestDist = dist; best = line;
+            }
+          }
+        }
+      });
+      nameBox = best;
+    }
+
+    // ---- 校准 baseX（内容列左边缘 = 标签右边缘 + 间距） ----
+    if (labelMaxX1 > 0 && timeBox) {
+      state.baseX = labelMaxX1 + Math.round(timeBox.h * 1.0);
+    } else if (timeBox) {
+      const analyzedT = analyzeRegion(timeBox, ctx.getImageData(0,0,state.W,state.H).data, state.W, state.H);
+      state.baseX = analyzedT.inkX0;
+    } else {
+      state.baseX = state.W * 0.28;
     }
 
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
     const regions = [];
-
     const addRegion = (box, type) => {
-        if (!box) return;
-        const analyzed = analyzeRegion(box, imgData, state.W, state.H);
-        analyzed.type = type; 
-        analyzed.offsetX = 0; analyzed.offsetY = 0;
-        regions.push(analyzed);
+      if (!box) return;
+      const analyzed = analyzeRegion(box, imgData, state.W, state.H);
+      analyzed.type = type;
+      analyzed.offsetX = 0; analyzed.offsetY = 0;
+      regions.push(analyzed);
     };
-
     addRegion(amountBox, 'amount');
     addRegion(timeBox, 'time');
     addRegion(orderBox, 'orderId');
     addRegion(accountBox, 'account');
     addRegion(nameBox, 'name');
-
     return regions;
   }
 
-  // ================= 4. 交互与生成 =================
+  // ========== 5. 交互与生成 ==========
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
-    
+
     emptyEl.style.display = 'block';
     emptyEl.innerHTML = `<div>正在载入图片...</div>`;
     canvas.style.display = 'none';
 
     const url = URL.createObjectURL(file);
     const im = new Image();
-    
     im.onload = async () => {
       state.img = im;
       const maxSide = 1800;
       const scale = Math.min(1, maxSide / Math.max(im.width, im.height));
       state.W = Math.round(im.width * scale);
       state.H = Math.round(im.height * scale);
-      
+
       canvas.width = state.W;
       canvas.height = state.H;
       ctx.drawImage(im, 0, 0, state.W, state.H);
-      
+
       try {
         state.regions = await runOCR();
-        
         state.text = { amount: '', time: '', orderId: '', name: '', account: '' };
         inputAmount.value = ''; inputTime.value = ''; inputOrderId.value = '';
         inputName.value = ''; inputAccount.value = '';
+        generateBtn.click();
 
-        generateBtn.click(); 
-        
         emptyEl.style.display = 'none';
         canvas.style.display = 'block';
         canvas.focus();
         downloadBtn.disabled = false;
-        
       } catch (err) {
-        alert("识别失败，请刷新重试");
+        console.error(err);
         emptyEl.innerHTML = `<div>识别失败，请重试</div>`;
       }
       URL.revokeObjectURL(url);
@@ -504,29 +553,28 @@
     im.src = url;
   }
 
+  const firsts = ['王','李','张','刘','陈','杨','赵','黄','周','吴','徐','孙','胡','朱','高','林','何','郭','马','罗'];
+  const seconds = ['伟','芳','娜','敏','静','丽','强','磊','军','洋','勇','艳','杰','娟','涛','明','超','秀英','霞','平'];
+  const maskChars = 'abcdefghijklmnopqrstuvwxyz';
+  const domains = ['qq.com','163.com','126.com','gmail.com','outlook.com','sina.com','foxmail.com'];
+
   generateBtn.onclick = () => {
-    if (!state.img) return alert("请先上传图片！");
-    
+    if (!state.img) return alert('请先上传图片！');
+
     const money = (Math.random() * 9000 + 100).toFixed(2);
-    const amountStr = `+${Number(money).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-    
+    const amountStr = '+' + Number(money).toLocaleString('en-US', {minimumFractionDigits: 2});
+
     const d = new Date(Date.now() - Math.random() * 100000000);
-    const p = n => n.toString().padStart(2, '0');
+    const p = n => String(n).padStart(2, '0');
     const timeStr = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
-    let orderStr = d.getFullYear().toString() + p(d.getMonth()+1) + p(d.getDate());
+    let orderStr = '2026' + String(Math.floor(Math.random()*1e10)).padStart(10,'0');
     while (orderStr.length < 28) orderStr += Math.floor(Math.random() * 10);
-    
-    const firsts = '赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜';
-    const seconds = ['伟','芳','娜','敏','静','丽','强','磊','军','洋','勇','艳','杰','娟','涛','明','超','秀兰','霞','平','刚','桂英','子涵','浩宇','雨桐','梓萱'];
+
     const randomName = firsts[Math.floor(Math.random()*firsts.length)] + seconds[Math.floor(Math.random()*seconds.length)] + Math.floor(Math.random()*10);
-    
-    const maskChars = 'abcdefghijklmnopqrstuvwxyz';
     const mask = Array.from({length:3}, () => maskChars[Math.floor(Math.random()*26)]).join('');
-    const domains = ['@163.com', '@qq.com', '@126.com', '@gmail.com'];
     const domain = domains[Math.floor(Math.random()*domains.length)];
-    
-    const accountStr = `${mask}***${domain}`;
+    const accountStr = `${mask}***@${domain}`;
     const nameStr = `${randomName} >`;
 
     state.text.amount = amountStr;
@@ -534,15 +582,13 @@
     state.text.orderId = orderStr;
     state.text.name = nameStr;
     state.text.account = accountStr;
-
     inputAmount.value = amountStr;
     inputTime.value = timeStr;
     inputOrderId.value = orderStr;
     inputName.value = nameStr;
     inputAccount.value = accountStr;
-
     renderResult();
-    showToast('✨ 演示数据已生成');
+    showToast('演示数据已生成');
   };
 
   $('uploadBtn').onclick = () => fileInput.click();
@@ -551,7 +597,6 @@
     if (e.target.files[0]) handleFile(e.target.files[0]);
     fileInput.value = '';
   };
-
   inputAmount.oninput = e => { state.text.amount = e.target.value; renderResult(); };
   inputTime.oninput = e => { state.text.time = e.target.value; renderResult(); };
   inputOrderId.oninput = e => { state.text.orderId = e.target.value; renderResult(); };
@@ -563,43 +608,46 @@
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (state.W / rect.width);
     const my = (e.clientY - rect.top) * (state.H / rect.height);
-
     activeRegionIndex = -1;
     for (let i = state.regions.length - 1; i >= 0; i--) {
-        const box = state.regions[i];
-        if (mx >= box.inkX0 - 20 && mx <= box.inkX1 + 20 && my >= box.inkY0 - 20 && my <= box.inkY1 + 20) {
-            activeRegionIndex = i;
-            break;
-        }
+      const box = state.regions[i];
+      if (mx >= box.inkX0 - 20 && mx <= box.inkX1 + 20 && my >= box.inkY0 - 20 && my <= box.inkY1 + 20) {
+        activeRegionIndex = i; break;
+      }
     }
-
     if (activeRegionIndex !== -1) {
-        isDragging = true;
-        dragStart = { x: e.clientX, y: e.clientY };
-        canvas.setPointerCapture(e.pointerId);
-        canvas.classList.add('draggable');
+      isDragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add('draggable');
     }
     renderResult();
   });
-
   canvas.addEventListener('pointermove', e => {
     if (!isDragging || activeRegionIndex === -1) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
     const rect = canvas.getBoundingClientRect();
-    
     const box = state.regions[activeRegionIndex];
     box.offsetX = (box.offsetX || 0) + dx * (state.W / rect.width);
     box.offsetY = (box.offsetY || 0) + dy * (state.H / rect.height);
-    
     dragStart = { x: e.clientX, y: e.clientY };
     renderResult();
   });
-
   canvas.addEventListener('pointerup', e => {
     isDragging = false;
     canvas.classList.remove('draggable');
-    canvas.releasePointerCapture(e.pointerId);
+    try { canvas.releasePointerCapture(e.pointerId); } catch(_) {}
+  });
+  canvas.addEventListener('keydown', e => {
+    if (activeRegionIndex === -1) return;
+    const step = e.shiftKey ? 5 : 1;
+    const box = state.regions[activeRegionIndex];
+    if (e.key === 'ArrowLeft') { box.offsetX = (box.offsetX||0) - step; e.preventDefault(); }
+    if (e.key === 'ArrowRight') { box.offsetX = (box.offsetX||0) + step; e.preventDefault(); }
+    if (e.key === 'ArrowUp') { box.offsetY = (box.offsetY||0) - step; e.preventDefault(); }
+    if (e.key === 'ArrowDown') { box.offsetY = (box.offsetY||0) + step; e.preventDefault(); }
+    renderResult();
   });
 
   downloadBtn.onclick = () => {
