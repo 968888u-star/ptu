@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>像素级一比一克隆 · 改数字</title>
-<!-- 引入各大 UI 和经典数字字体 -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<title>订单号截图完美替换神器</title>
+<!-- 引入现代 UI 字体和等宽字体 -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Share+Tech+Mono&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --primary: #4f46e5;
@@ -26,7 +26,7 @@
 
   /* 左侧面板 */
   .panel {
-    width: 330px; flex: none; padding: 24px 20px;
+    width: 350px; flex: none; padding: 24px 20px;
     background: var(--panel); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
   }
@@ -37,20 +37,28 @@
   .glabel { font-size: 13px; color: var(--subtext); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
   .glabel .badge { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
   
+  .input-group { display: flex; gap: 8px; }
   input[type="text"] {
     background: #1b1f2a; border: 1px solid var(--border); color: #fff;
-    border-radius: 8px; padding: 14px; font-size: 18px; width: 100%; outline: none;
-    font-family: 'Inter', sans-serif; transition: 0.2s; letter-spacing: 1px;
+    border-radius: 8px; padding: 12px 14px; font-size: 16px; width: 100%; outline: none;
+    font-family: 'Roboto', monospace; transition: 0.2s; letter-spacing: 0.5px;
   }
   input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
   
+  button.random-btn {
+    background: rgba(79, 70, 229, 0.15); border: 1px solid rgba(79, 70, 229, 0.4);
+    color: #a5b4fc; border-radius: 8px; padding: 0 16px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+  }
+  button.random-btn:hover { background: rgba(79, 70, 229, 0.3); color: #fff; }
+
   select {
     background: #1b1f2a; border: 1px solid var(--border); color: var(--text);
     border-radius: 8px; padding: 10px; font-size: 13px; width: 100%; outline: none;
   }
 
   .slider-row { display: flex; align-items: center; gap: 12px; }
-  .slider-row span { font-size: 12px; color: var(--subtext); width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+  .slider-row span { font-size: 12px; color: var(--subtext); width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
   input[type="range"] {
     -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
     background: var(--border); outline: none; flex: 1;
@@ -90,67 +98,66 @@
 <div class="app">
   <aside class="panel">
     <header class="brand">
-      <h1>1:1 智能克隆引擎</h1>
-      <p>自动测算原图字高、宽度、墨迹密度</p>
+      <h1>订单号完美克隆</h1>
+      <p>自动识别长度 · 智能随机生成替换</p>
     </header>
 
     <button class="primary" id="uploadBtn">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5-5 5 5m-5-5v12"></path></svg>
-      选择原图
+      上传原截图
     </button>
 
     <div class="group">
-      <div class="glabel">新数字内容 <span class="badge">实时预览</span></div>
-      <input type="text" id="textInput" value="+8,888.88" spellcheck="false">
+      <div class="glabel">替换内容 <span class="badge">实时预览</span></div>
+      <div class="input-group">
+        <input type="text" id="textInput" value="" placeholder="等待识别..." spellcheck="false">
+        <button class="random-btn" id="randomBtn" title="生成相同长度且带日期的随机单号">
+          🎲 随机单号
+        </button>
+      </div>
     </div>
 
     <div class="group">
-      <div class="glabel">字体特征匹配</div>
+      <div class="glabel">字体特征 (订单号多为等宽字体)</div>
       <select id="fontSel">
-        <option value="Inter, sans-serif">Inter (现代 UI 默认)</option>
-        <option value="Roboto, sans-serif">Roboto (安卓/谷歌)</option>
-        <option value="Oswald, sans-serif">Oswald (窄高/票据)</option>
-        <option value="Barlow Condensed, sans-serif">Barlow (紧凑)</option>
-        <option value="Share Tech Mono, monospace">Share Tech (等宽/代码)</option>
-        <option value="Arial, sans-serif">Arial (经典)</option>
+        <option value="Roboto, sans-serif">Roboto (现代 UI 字体)</option>
+        <option value="Share Tech Mono, monospace">Share Tech Mono (经典等宽)</option>
+        <option value="Inter, sans-serif">Inter (系统默认)</option>
+        <option value="Oswald, sans-serif">Oswald (窄高/紧凑)</option>
+        <option value="Arial, sans-serif">Arial</option>
       </select>
     </div>
 
     <div class="group">
-      <div class="glabel">微调对齐 (可选)</div>
+      <div class="glabel">微调对齐</div>
       <div class="slider-row">
         <span>字重</span>
-        <input type="range" id="weightRange" min="300" max="900" step="100" value="600">
-        <span id="weightVal">600</span>
+        <input type="range" id="weightRange" min="300" max="700" step="100" value="400">
+        <span id="weightVal">400</span>
       </div>
       <div class="slider-row">
-        <span>字宽</span>
+        <span>缩放</span>
         <input type="range" id="scaleXRange" min="70" max="130" step="1" value="100">
         <span id="scaleXVal">100%</span>
       </div>
       <div class="slider-row">
-        <span>高度</span>
-        <input type="range" id="scaleYRange" min="70" max="130" step="1" value="100">
-        <span id="scaleYVal">100%</span>
-      </div>
-      <div class="slider-row">
         <span>字距</span>
-        <input type="range" id="spacingRange" min="-10" max="20" step="0.5" value="0">
+        <input type="range" id="spacingRange" min="-5" max="15" step="0.5" value="0">
         <span id="spacingVal">0</span>
       </div>
     </div>
 
     <div class="tip">
-      💡 <b>一键完美：</b>程序已自动测算尺寸和颜色。若位置有 1~2 像素偏差，可在右侧画布直接拖动，或用键盘方向键微调。
+      💡 <b>操作提示：</b>上传截图后，点击「🎲 随机单号」即可自动替换。如果位置有 1~2 像素偏差，可以在右侧画布直接拖动，或用键盘方向键微调。
     </div>
 
-    <button class="primary" id="downloadBtn" disabled style="margin-top:auto">下载无损原图</button>
+    <button class="primary" id="downloadBtn" disabled style="margin-top:auto">下载无损截图</button>
   </aside>
 
   <main class="stage" id="stage">
     <div class="empty" id="empty">
       <div style="font-size:48px;margin-bottom:12px">🪄</div>
-      <div>点击上传图片，自动进行像素级替换</div>
+      <div>点击上传包含订单号的截图</div>
     </div>
     <canvas id="cv" tabindex="0"></canvas>
   </main>
@@ -170,20 +177,21 @@
   const emptyEl = $('empty');
   const fileInput = $('fileInput');
   const textInput = $('textInput');
+  const randomBtn = $('randomBtn');
   const fontSel = $('fontSel');
   const weightRange = $('weightRange');
   const scaleXRange = $('scaleXRange');
-  const scaleYRange = $('scaleYRange');
   const spacingRange = $('spacingRange');
   const downloadBtn = $('downloadBtn');
 
   const state = {
     img: null, W: 0, H: 0,
-    targetBox: null, // 包含真实墨迹边界和颜色
-    newText: '+8,888.88',
-    font: 'Inter, sans-serif',
-    weight: 600,
-    scaleX: 1, scaleY: 1, spacing: 0,
+    targetBox: null, 
+    newText: '',
+    originalText: '',
+    font: 'Roboto, sans-serif',
+    weight: 400,
+    scaleX: 1, spacing: 0,
     offsetX: 0, offsetY: 0
   };
 
@@ -192,32 +200,28 @@
   let dragStart = { x: 0, y: 0 };
 
   // ================= 1. 深度图像化验分析 =================
-  
-  // 获取真正的“墨迹”边界（去留白）
   function getRealInkBounds(box, data, W, H) {
     let minX = box.x1, maxX = box.x0, minY = box.y1, maxY = box.y0;
     let fgCount = 0;
     
     // 采样背景色（取外围）
-    const outerBg = [255,255,255]; // 默认
-    const pad = 15;
     let rSum=0, gSum=0, bSum=0, cnt=0;
+    const pad = 15;
     for(let y=Math.max(0,box.y0-pad); y<Math.min(H,box.y1+pad); y++){
         for(let x=Math.max(0,box.x0-pad); x<Math.min(W,box.x1+pad); x++){
             if(x>=box.x0 && x<=box.x1 && y>=box.y0 && y<=box.y1) continue;
             const i = (y*W+x)*4; rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
         }
     }
-    if(cnt>0) { outerBg[0]=rSum/cnt; outerBg[1]=gSum/cnt; outerBg[2]=bSum/cnt; }
+    const outerBg = cnt > 0 ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
 
     // 寻找真实边界
     for (let y = Math.max(0, Math.floor(box.y0)); y < Math.min(H, box.y1); y++) {
       for (let x = Math.max(0, Math.floor(box.x0)); x < Math.min(W, box.x1); x++) {
         const i = (y * W + x) * 4;
         const r = data[i], g = data[i+1], b = data[i+2];
-        // 容差：与背景色的差异大于阈值，认为是文字
         const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
-        if (diff > 80) {
+        if (diff > 60) { // 容差调低，更容易抓取浅色文字
           fgCount++;
           if (x < minX) minX = x; if (x > maxX) maxX = x;
           if (y < minY) minY = y; if (y > maxY) maxY = y;
@@ -225,14 +229,13 @@
       }
     }
 
-    // 若未找到（可能是纯色块），退回原框
     if (fgCount < 10) return { ...box, inkRatio: 0, fg: [0,0,0], bg: outerBg };
 
     const realW = Math.max(1, maxX - minX);
     const realH = Math.max(1, maxY - minY);
-    const inkRatio = fgCount / (realW * realH); // 墨迹密度
+    const inkRatio = fgCount / (realW * realH);
 
-    // 在真实边界内寻找前景文字色（最深的像素均值）
+    // 提取前景文字色
     const fgPixels = [];
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -245,7 +248,7 @@
     fgPixels.sort((a, b) => b.d - a.d);
     let fg = [0,0,0];
     if(fgPixels.length>0){
-        const topN = Math.max(1, Math.floor(fgPixels.length * 0.15)); // 取最深的 15%
+        const topN = Math.max(1, Math.floor(fgPixels.length * 0.15)); 
         let r=0,g=0,b=0; for(let i=0;i<topN;i++){ r+=fgPixels[i].r; g+=fgPixels[i].g; b+=fgPixels[i].b; }
         fg = [Math.round(r/topN), Math.round(g/topN), Math.round(b/topN)];
     }
@@ -257,8 +260,7 @@
     };
   }
 
-  // ================= 2. 核心高保真绘制 =================
-  
+  // ================= 2. 高保真绘制（完美自适应长数字） =================
   function getTextWidth(text, letterSpacing) {
     let w = 0;
     for (let i = 0; i < text.length; i++) w += ctx.measureText(text[i]).width + letterSpacing;
@@ -279,106 +281,106 @@
     if (!state.img) return;
     const W = state.W, H = state.H;
 
-    // 清空画布
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(state.img, 0, 0, W, H);
 
     const box = state.targetBox;
     if (!box) return;
 
-    // 1. 极简遮盖：只覆盖文字所在的真实墨迹边缘，加上 1~2 像素的羽化保护
+    // 覆盖原数字 (略微扩大，防止边缘残留)
     ctx.fillStyle = `rgb(${box.bg.map(v=>Math.round(v)).join(',')})`;
-    const coverPadX = Math.max(1, box.w * 0.05);
-    const coverPadY = Math.max(1, box.h * 0.05);
+    const coverPadX = Math.max(1, box.w * 0.03);
+    const coverPadY = Math.max(1, box.h * 0.08);
     ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX*2, box.h + coverPadY*2);
 
-    // 2. 准备文字
     const text = state.newText;
     if (!text) return;
 
-    // 3. 核心计算：让字体物理高度绝对等于原图物理高度
+    // 核心算法：首先假设字高等于原图字高，测出宽度
     ctx.font = `${state.weight} 100px ${state.font}`;
-    // 使用度量数据获取 "100px" 下文字的真实墨迹高度
     const metrics = ctx.measureText(text);
     const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
     
-    // 计算出完美字号
-    let baseFontSize = 100;
+    let finalFontSize = 100;
     if (rawH > 0) {
-      baseFontSize = (box.h / rawH) * 100;
+      finalFontSize = (box.h / rawH) * 100;
     }
 
-    // 4. 宽高自适应（如果输入的文字比原图长，自动压缩字宽，保持不外溢）
-    ctx.font = `${state.weight} ${baseFontSize}px ${state.font}`;
-    const spacing = state.spacing * (baseFontSize / 100);
-    const rawW = getTextWidth(text, spacing);
-    
-    // 计算宽高比缩放
-    let finalScaleX = state.scaleX;
-    let finalScaleY = state.scaleY;
+    // 检查宽度是否溢出，如果是长订单号，通常需要按宽度适配，防止穿模
+    const tempSpacing = state.spacing * (finalFontSize / 100);
+    ctx.font = `${state.weight} ${finalFontSize}px ${state.font}`;
+    const testWidth = getTextWidth(text, tempSpacing);
 
-    // 限制最大宽度为原框宽度的 1.25 倍，防止完全破坏排版（如需更宽可以放开）
-    if (rawW > box.w * 1.25 && state.scaleX === 1) {
-        finalScaleX = (box.w * 1.25) / rawW;
+    // 如果算出来的宽度超出了原框长度，就强制按宽度缩小字号
+    if (testWidth > box.w * 1.02) {
+        finalFontSize = finalFontSize * (box.w * 1.02 / testWidth);
     }
+
+    ctx.font = `${state.weight} ${finalFontSize}px ${state.font}`;
+    const spacing = state.spacing * (finalFontSize / 100);
+    const finalRawW = getTextWidth(text, spacing);
 
     ctx.save();
     
-    // 设定中心点 + 手动偏移
+    // 中心点计算（加偏移）
     const centerX = box.x0 + box.w / 2 + state.offsetX;
     const centerY = box.y0 + box.h / 2 + state.offsetY;
     
-    // 应用横向和纵向缩放
     ctx.translate(centerX, centerY);
-    ctx.scale(finalScaleX, finalScaleY);
+    ctx.scale(state.scaleX, 1);
     ctx.translate(-centerX, -centerY);
 
-    // 应用颜色
     ctx.fillStyle = `rgb(${box.fg.join(',')})`;
 
-    // 绘制（起始点居中）
-    const drawW = rawW * finalScaleX;
+    // 起点
+    const drawW = finalRawW * state.scaleX;
     const startX = centerX - drawW / 2;
     
-    // 调整 Y 轴基点：让文字的视觉中心对齐框的中心
-    // actualBoundingBoxAscent 是基线到顶部的距离
+    // 基线对齐
     const yOffset = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
-    const finalY = centerY + yOffset * finalScaleY;
+    const finalY = centerY + yOffset;
 
     drawTextWithSpacing(text, startX, finalY, spacing);
 
     ctx.restore();
   }
 
-  // ================= 3. OCR 识别 =================
+  // ================= 3. OCR 智能识别提取 =================
   async function runOCR() {
-    const os = Math.min(2.0, 2000 / Math.max(state.W, state.H)); // 放大以提高识别率
+    const os = Math.min(2.0, 2000 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
     oc.width = Math.round(state.W * os);
     oc.height = Math.round(state.H * os);
     const octx = oc.getContext('2d');
     
-    // 增强对比度，利于二值化识别
-    octx.filter = 'contrast(1.5) grayscale(1)';
+    octx.filter = 'contrast(1.3) grayscale(1)';
     octx.drawImage(state.img, 0, 0, oc.width, oc.height);
 
     if (!worker) {
       worker = await Tesseract.createWorker('eng', 1, {
         logger: m => {
           if (m.status === 'recognizing text') {
-            emptyEl.innerHTML = `<div>AI 正在分析像素特征... ${Math.round(m.progress*100)}%</div>`;
+            emptyEl.innerHTML = `<div>正在分析长串数字... ${Math.round(m.progress*100)}%</div>`;
           }
         }
       });
     }
 
-    await worker.setParameters({ tessedit_char_whitelist: '0123456789.,+-$%' });
+    await worker.setParameters({ tessedit_char_whitelist: '0123456789' });
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    const words = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30);
-    
-    // 找到面积最大的那个连续数字区域（往往是主数字）
+    // 查找最长连续数字
+    const fullText = data.text.replace(/\s/g, '');
+    const matches = fullText.match(/\d{6,}/g); // 查找至少6位的数字
+    let extractedText = '';
+    if (matches && matches.length > 0) {
+      matches.sort((a,b) => b.length - a.length);
+      extractedText = matches[0];
+    }
+
+    // 同时找到包含这个数字面积最大的 Block
+    const words = (data.words || []).filter(w => w.text.trim().length > 0);
     let targetBox = null;
     let maxArea = 0;
 
@@ -397,17 +399,20 @@
       }
     }
 
-    // 如果没找到，把整张图当做目标
     if (!targetBox) {
-      targetBox = { x0: state.W*0.1, y0: state.H*0.4, x1: state.W*0.9, y1: state.H*0.6, w: state.W*0.8, h: state.H*0.2 };
+      targetBox = { x0: state.W*0.2, y0: state.H*0.4, x1: state.W*0.8, y1: state.H*0.6, w: state.W*0.6, h: state.H*0.2 };
     }
 
-    // 深度分析色彩和边界
+    // 深度分析
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
-    return getRealInkBounds(targetBox, imgData, state.W, state.H);
+    const boxFeatures = getRealInkBounds(targetBox, imgData, state.W, state.H);
+    
+    // 把识别出来的原文本绑上去
+    boxFeatures.extractedText = extractedText;
+    return boxFeatures;
   }
 
-  // ================= 4. 事件处理 =================
+  // ================= 4. 事件与交互 =================
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     
@@ -420,7 +425,6 @@
     
     im.onload = async () => {
       state.img = im;
-      // 限制最大尺寸，防止手机卡死
       const maxSide = 2000;
       const scale = Math.min(1, maxSide / Math.max(im.width, im.height));
       state.W = Math.round(im.width * scale);
@@ -433,21 +437,25 @@
       try {
         state.targetBox = await runOCR();
         
-        // 智能预判字重
-        if (state.targetBox.inkRatio > 0.25) {
-          weightRange.value = 700;
-        } else if (state.targetBox.inkRatio < 0.1) {
-          weightRange.value = 400;
+        // 自动填充原文本
+        if (state.targetBox.extractedText) {
+          state.originalText = state.targetBox.extractedText;
+          state.newText = state.originalText;
+          textInput.value = state.originalText;
         } else {
-          weightRange.value = 600;
+          state.originalText = '';
+          state.newText = '';
+          textInput.value = '';
+          textInput.placeholder = "请手动输入号码";
         }
-        $('weightVal').textContent = weightRange.value;
-        state.weight = parseInt(weightRange.value);
 
+        // 重置微调
         state.offsetX = 0; state.offsetY = 0;
-        state.scaleX = 1; state.scaleY = 1;
-        scaleXRange.value = 100; scaleYRange.value = 100;
-        $('scaleXVal').textContent = '100%'; $('scaleYVal').textContent = '100%';
+        state.scaleX = 1;
+        scaleXRange.value = 100;
+        $('scaleXVal').textContent = '100%';
+        spacingRange.value = 0;
+        $('spacingVal').textContent = '0';
         
         renderResult();
         
@@ -465,6 +473,35 @@
     im.src = url;
   }
 
+  // 随机单号生成逻辑
+  randomBtn.onclick = () => {
+    const baseText = state.originalText || textInput.value || '20260618200040011100410007156705';
+    const len = Math.max(12, baseText.length); // 最小生成12位
+    
+    let randomStr = '';
+    
+    // 模拟电商订单号格式：前缀(如日期) + 随机流水号
+    if (len >= 14) {
+        // 用今天的日期作为前缀 (YYYYMMDD)
+        const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+        randomStr += dateStr;
+        
+        // 剩余位数随机生成
+        for (let i = 8; i < len; i++) {
+            randomStr += Math.floor(Math.random() * 10);
+        }
+    } else {
+        // 短数字纯随机
+        for (let i = 0; i < len; i++) {
+            randomStr += Math.floor(Math.random() * 10);
+        }
+    }
+    
+    textInput.value = randomStr;
+    state.newText = randomStr;
+    renderResult();
+  };
+
   $('uploadBtn').onclick = () => fileInput.click();
   emptyEl.onclick = () => fileInput.click();
   fileInput.onchange = e => {
@@ -472,16 +509,14 @@
     fileInput.value = '';
   };
 
-  // 实时参数绑定
+  // 参数调整
   textInput.oninput = e => { state.newText = e.target.value; renderResult(); };
   fontSel.onchange = e => { state.font = e.target.value; renderResult(); };
-  
   weightRange.oninput = e => { state.weight = parseInt(e.target.value); $('weightVal').textContent = e.target.value; renderResult(); };
   scaleXRange.oninput = e => { state.scaleX = parseInt(e.target.value) / 100; $('scaleXVal').textContent = e.target.value + '%'; renderResult(); };
-  scaleYRange.oninput = e => { state.scaleY = parseInt(e.target.value) / 100; $('scaleYVal').textContent = e.target.value + '%'; renderResult(); };
   spacingRange.oninput = e => { state.spacing = parseFloat(e.target.value); $('spacingVal').textContent = e.target.value; renderResult(); };
 
-  // 鼠标拖拽 1px 对齐
+  // 鼠标拖拽
   canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
     isDragging = true;
@@ -507,7 +542,7 @@
     canvas.releasePointerCapture(e.pointerId);
   });
 
-  // 键盘方向键微调
+  // 键盘微调
   canvas.addEventListener('keydown', e => {
     if (!state.img) return;
     const step = e.shiftKey ? 10 : 1;
@@ -524,7 +559,7 @@
     canvas.toBlob(blob => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = '完美克隆_' + Date.now() + '.png';
+      a.download = '完美订单号_' + Date.now() + '.png';
       a.click();
     }, 'image/png');
   };
