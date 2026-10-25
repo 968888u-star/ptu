@@ -278,28 +278,7 @@
         text = `${pureName} ${text}`;
       }
 
-      // ---- 3.1 无痕擦除 ----
-      const bg = box.bg.map(v => isNaN(v) ? 255 : Math.round(v));
-      ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
-
-      let eraseL, eraseR;
-      const padY = Math.max(3, Math.round(box.eraseH * 0.3));
-
-      if (['time','orderId','account'].includes(box.type)) {
-        // 左对齐行：从基准线左缘擦起（仅留 2px 抗锯齿余量，绝不触碰左侧标签）
-        eraseL = state.baseX - 2;
-        // 右边界：取原内容右缘与新文本预估宽度的最大值
-        ctx.font = `400 100px ${fontFam}`;
-        const estW = ctx.measureText(text).width * (baseInkH / 100) * 1.1;
-        eraseR = Math.max(box.eraseX + box.eraseW + 8, eraseL + estW + 10);
-      } else {
-        // 居中行（金额/姓名）：擦除原墨迹范围并适当放宽
-        eraseL = box.inkX0 - Math.round(box.inkW * 0.15) - 4;
-        eraseR = box.inkX1 + Math.round(box.inkW * 0.15) + 4;
-      }
-      ctx.fillRect(eraseL, box.eraseY - padY, eraseR - eraseL, box.eraseH + padY * 2);
-
-      // ---- 3.2 字号计算（基于原墨迹高度等比缩放） ----
+      // ---- 3.1 先计算字号与文本宽度（擦除范围依赖精确宽度） ----
       let weight = 400;
       if (box.type === 'amount') weight = 700;
       else if (box.type === 'name') weight = 500;
@@ -312,7 +291,6 @@
       const rawH = m100.actualBoundingBoxAscent + m100.actualBoundingBoxDescent;
       let fontSize = rawH > 0 ? (targetH / rawH) * 100 : targetH * 2;
 
-      // 防溢出：若文本过宽则等比压缩
       ctx.font = `${weight} ${fontSize}px ${fontFam}`;
       let tw = ctx.measureText(text).width;
       const maxW = (box.type === 'amount' || box.type === 'name')
@@ -323,6 +301,27 @@
         ctx.font = `${weight} ${fontSize}px ${fontFam}`;
         tw = ctx.measureText(text).width;
       }
+
+      // ---- 3.2 无痕擦除（基于新文本精确宽度，杜绝旧文字残留） ----
+      const bg = box.bg.map(v => isNaN(v) ? 255 : Math.round(v));
+      ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+
+      let eraseL, eraseR;
+      const padY = Math.max(3, Math.round(box.eraseH * 0.35));
+
+      if (['time','orderId','account'].includes(box.type)) {
+        // 左对齐行：从基准线左缘擦起（仅留 2px 抗锯齿余量，绝不触碰左侧标签）
+        eraseL = state.baseX - 2;
+        // 右边界：取原内容右缘与新文本实际宽度 + 余量的最大值
+        eraseR = Math.max(box.eraseX + box.eraseW + 8, eraseL + tw + 12);
+      } else {
+        // 居中行（金额/姓名）：以原中心为基准，按新文本宽度对称擦除
+        const centerX = box.inkX0 + box.inkW / 2;
+        const halfW = Math.max(box.inkW / 2, tw / 2) + 8;
+        eraseL = centerX - halfW;
+        eraseR = centerX + halfW;
+      }
+      ctx.fillRect(eraseL, box.eraseY - padY, eraseR - eraseL, box.eraseH + padY * 2);
 
       // ---- 3.3 绘制（垂直基线精准对齐） ----
       const fg = box.fg.map(v => isNaN(v) ? 20 : Math.round(v));
