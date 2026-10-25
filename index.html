@@ -89,7 +89,7 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>画布级重绘 · 彻底解决重叠错位</p>
+      <p>行级彻底擦除 · 统一字号重绘</p>
       <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
     </header>
 
@@ -162,7 +162,7 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 深度图像化验分析 (超强校准) =================
+  // ================= 1. 深度图像化验分析 =================
   function analyzeRegion(box, data, W, H) {
     const bx0 = Math.floor(box.x0);
     const bx1 = Math.ceil(box.x1);
@@ -174,7 +174,7 @@
     
     // 取外围背景
     let rSum=0, gSum=0, bSum=0, cnt=0;
-    const pad = 15;
+    const pad = 20;
     for(let y=Math.max(0, by0-pad); y<Math.min(H, by1+pad); y++){
         for(let x=Math.max(0, bx0-pad); x<Math.min(W, bx1+pad); x++){
             if(x>=bx0 && x<=bx1 && y>=by0 && y<=by1) continue;
@@ -184,13 +184,13 @@
     }
     const outerBg = (cnt > 0 && !isNaN(rSum)) ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
 
-    // 寻找真实墨迹边界
+    // 寻找真实文字边界 (墨迹)
     for (let y = Math.max(0, by0); y < Math.min(H, by1); y++) {
       for (let x = Math.max(0, bx0); x < Math.min(W, bx1); x++) {
         const i = (y * W + x) * 4;
         const r = data[i], g = data[i+1], b = data[i+2];
         const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
-        if (diff > 50) { 
+        if (diff > 40) { 
           fgCount++;
           if (x < minX) minX = x; if (x > maxX) maxX = x;
           if (y < minY) minY = y; if (y > maxY) maxY = y;
@@ -198,7 +198,7 @@
       }
     }
 
-    if (fgCount < 10) return { ...box, fg: [0,0,0], bg: outerBg };
+    if (fgCount < 10) return { ...box, inkH: by1-by0, inkW: bx1-bx0, inkX0: bx0, inkY0: by0, fg: [0,0,0], bg: outerBg };
 
     // 提取文字真实颜色
     const fgPixels = [];
@@ -207,7 +207,7 @@
         const i = (y * W + x) * 4;
         const r = data[i], g = data[i+1], b = data[i+2];
         const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
-        if (diff > 50) fgPixels.push({ d: diff, r, g, b });
+        if (diff > 40) fgPixels.push({ d: diff, r, g, b });
       }
     }
     fgPixels.sort((a, b) => b.d - a.d);
@@ -236,37 +236,60 @@
 
     const fontFam = `"PingFang SC", "Microsoft YaHei", "Inter", sans-serif`;
 
+    // 计算全局基准高度（用于统一时间、订单号、账户的字体大小）
+    let baseInkH = 0;
+    state.regions.forEach(box => {
+        if (['time', 'orderId', 'account'].includes(box.type)) {
+            if (box.inkH > baseInkH) baseInkH = box.inkH;
+        }
+    });
+    if (baseInkH === 0) baseInkH = 20; // 兜底
+
     state.regions.forEach((box, idx) => {
       let text = state.text[box.type];
       if (!text) return; 
 
-      // 核心修复：账户行合并名字和邮箱
+      // 账户行：合并名字和邮箱
       if (box.type === 'account') {
-          // 去掉名字尾部的箭头，拼上邮箱
           const pureName = state.text.name.replace(' >', '').trim(); 
           text = `${pureName} ${text}`;
       }
 
-      // 1. 强力擦除（向外扩大范围）
+      // 1. 极端安全擦除（不留残影）
       const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${bgStr})`;
       
-      const padX = 20; // 强制向左右多擦 20px
-      const padY = 5;  // 向上下多擦 5px
-      ctx.fillRect(box.eraseX - padX, box.eraseY - padY, box.eraseW + padX*2, box.eraseH + padY*2);
+      // 针对每一行，狂擦除，绝对盖住漏网之鱼
+      const padX = 40; // 左右各擦 40px
+      const padY = 8;  // 上下各擦 8px
+      
+      // 对于时间和单号，如果 OCR 没框全，强制从订单号左侧开始算起
+      let startEraseX = Math.max(0, box.eraseX - padX);
+      if ((box.type === 'time' || box.type === 'orderId') && state.regions.find(r => r.type === 'orderId')) {
+          // 确保擦除区域的左边界和订单号对齐，彻底吃掉左侧标签的残留
+          startEraseX = Math.max(0, state.regions.find(r => r.type === 'orderId').inkX0 - padX);
+      }
 
-      // 2. 计算字号（基于真实墨迹高度）
+      ctx.fillRect(startEraseX, box.eraseY - padY, (box.eraseX + box.eraseW + padX) - startEraseX, box.eraseH + padY*2);
+
+      // 2. 计算字号
       let weight = 400;
       if (box.type === 'amount') weight = 600; 
+      
+      let targetH = box.inkH;
+      // 如果是普通文字行，用全局统一高度，防止字号忽大忽小
+      if (['time', 'orderId', 'account'].includes(box.type)) {
+          targetH = baseInkH;
+      }
 
       ctx.font = `${weight} 100px ${fontFam}`;
       const metrics = ctx.measureText(text);
       const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-      let finalFontSize = rawH > 0 ? (box.inkH / rawH) * 100 : 100;
+      let finalFontSize = rawH > 0 ? (targetH / rawH) * 100 : 100;
       
+      // 宽度防溢出限制
       ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
       const textWidth = ctx.measureText(text).width;
-      // 如果超出长度，等比缩小
       if (textWidth > box.inkW * 1.1) {
           finalFontSize = finalFontSize * (box.inkW * 1.1 / textWidth);
       }
@@ -285,7 +308,7 @@
       }
 
       const centerY = box.inkY0 + box.inkH / 2 + (box.offsetY || 0);
-      let startX = box.inkX0 + (box.offsetX || 0);
+      let startX = startEraseX + padX + (box.offsetX || 0); // 从擦除区域的左侧开始写
       
       if (ctx.textAlign === 'center') {
           startX = box.inkX0 + box.inkW / 2 + (box.offsetX || 0);
@@ -329,74 +352,79 @@
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    const allWords = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30).map(w => {
-        const b = {
-            x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
-            x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
-        };
-        b.w = b.x1 - b.x0; b.h = b.y1 - b.y0;
-        b.text = w.text.replace(/\s/g, '');
-        return b;
+    // 把所有的词按照水平行聚合成块 (行级投影)
+    const rawWords = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30).map(w => ({
+        x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
+        x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
+        text: w.text.replace(/\s/g, '')
+    }));
+    
+    // 合并行
+    rawWords.sort((a,b) => a.y0 - b.y0);
+    const lines = [];
+    rawWords.forEach(w => {
+        let matchedLine = lines.find(line => {
+            const overlap = Math.min(line.y1, w.y1) - Math.max(line.y0, w.y0);
+            return overlap > Math.min(line.y1-line.y0, w.y1-w.y0) * 0.4;
+        });
+        if (matchedLine) {
+            matchedLine.x0 = Math.min(matchedLine.x0, w.x0);
+            matchedLine.y0 = Math.min(matchedLine.y0, w.y0);
+            matchedLine.x1 = Math.max(matchedLine.x1, w.x1);
+            matchedLine.y1 = Math.max(matchedLine.y1, w.y1);
+            matchedLine.text += w.text;
+        } else {
+            lines.push({ x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1, text: w.text });
+        }
     });
 
     let amountBox = null, timeBox = null, orderBox = null, accountBox = null, nameBox = null;
 
-    // 分类
-    allWords.forEach(w => {
-        if (w.text.includes('@') || w.text.includes('*')) {
-            if (!accountBox || w.w > accountBox.w) accountBox = w;
+    // 按行特征抓取
+    lines.forEach(line => {
+        const text = line.text;
+        const w = line.x1 - line.x0;
+        const h = line.y1 - line.y0;
+        
+        if (text.includes('@') || text.includes('*')) {
+            if (!accountBox || w > accountBox.w) accountBox = line;
         }
-        else if (/^\d{15,}$/.test(w.text)) {
-            if (!orderBox || w.w > orderBox.w) orderBox = w;
+        else if (/^\d{15,}$/.test(text)) {
+            if (!orderBox || w > orderBox.w) orderBox = line;
         }
-        else if (w.text.includes('+') || w.text.includes('.')) {
-            if (w.h > 20 && (!amountBox || w.w * w.h > amountBox.w * amountBox.h)) amountBox = w;
+        else if (text.includes('+') || text.includes('.')) {
+            if (h > 20 && (!amountBox || w * h > amountBox.w * amountBox.h)) amountBox = line;
         }
-        else if (w.text.includes(':') || w.text.includes('-')) {
-            if (!timeBox || w.w > timeBox.w) timeBox = w;
+        else if (text.includes(':') || text.includes('-')) {
+            if (!timeBox || w > timeBox.w) timeBox = line;
         }
     });
 
-    // 如果没找到时间，强制根据单号的位置生成一个超长的时间遮罩区
+    // 如果没找到时间，通过单号倒推一个超宽的时间框
     if (!timeBox && orderBox) {
         timeBox = {
             x0: orderBox.x0 - 20, 
-            y0: orderBox.y0 - orderBox.h * 1.8, 
-            x1: orderBox.x0 + orderBox.w, // 跟单号等宽
-            y1: orderBox.y0 - orderBox.h * 0.8
+            y0: orderBox.y0 - orderBox.h * 2, // 往上找一行
+            x1: orderBox.x0 + orderBox.w,
+            y1: orderBox.y0 - orderBox.h * 0.5
         };
-        timeBox.w = timeBox.x1 - timeBox.x0;
-        timeBox.h = timeBox.y1 - timeBox.y0;
-    }
-
-    // 账户行左侧扩展：如果找到了账户，把它左边的名字也包进来
-    if (accountBox) {
-        allWords.forEach(w => {
-            if (w === accountBox) return;
-            const overlapY = Math.min(accountBox.y1, w.y1) - Math.max(accountBox.y0, w.y0);
-            if (overlapY > Math.min(accountBox.h, w.h) * 0.5) {
-                if (w.x1 < accountBox.x0 && accountBox.x0 - w.x1 < 100) {
-                    accountBox.x0 = w.x0; // 向左延伸吞并名字
-                    accountBox.w = accountBox.x1 - accountBox.x0;
-                }
-            }
-        });
     }
 
     // 顶部名字
     if (amountBox) {
         let minDist = 9999;
-        allWords.forEach(w => {
-            if (w.y1 < amountBox.y0 && w.x0 > amountBox.x0 - 50 && w.x1 < amountBox.x1 + 50) {
-                const dist = amountBox.y0 - w.y1;
-                if (dist < 100 && dist < minDist && w.h > 10 && w.h < amountBox.h * 0.8) {
+        lines.forEach(line => {
+            if (line.y1 < amountBox.y0 && line.x0 > amountBox.x0 - 50 && line.x1 < amountBox.x1 + 50) {
+                const dist = amountBox.y0 - line.y1;
+                if (dist < 100 && dist < minDist && (line.y1-line.y0) > 10 && (line.y1-line.y0) < (amountBox.y1-amountBox.y0) * 0.8) {
                     minDist = dist;
-                    nameBox = w;
+                    nameBox = line;
                 }
             }
         });
     }
 
+    // 将合并后的行数据转为区域
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
     const regions = [];
 
