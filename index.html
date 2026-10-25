@@ -3,134 +3,154 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>像素级克隆 · 改数字神器</title>
-<!-- 引入最接近现代 UI 截图的字体 -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<title>像素级一比一克隆 · 改数字</title>
+<!-- 引入各大 UI 和经典数字字体 -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Oswald:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #3b82f6;
-    --primary-hover: #2563eb;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
     --bg: #0f1115;
     --panel: #161920;
     --border: #2a2f3d;
+    --text: #e6e8ee;
+    --subtext: #8b93a5;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg); color: #e6e8ee; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
   .app { display: flex; height: 100vh; }
 
   /* 左侧面板 */
   .panel {
-    width: 340px; flex: none; padding: 20px 18px;
+    width: 330px; flex: none; padding: 24px 20px;
     background: var(--panel); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
   }
-  .brand h1 { font-size: 18px; font-weight: 700; color: #fff; }
-  .brand p { font-size: 12px; color: #7c8399; margin-top: 4px; }
+  .brand h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  .brand p { font-size: 12px; color: var(--subtext); margin-top: 6px; }
 
-  .group { display: flex; flex-direction: column; gap: 8px; }
-  .glabel { font-size: 12px; color: #7c8399; font-weight: 600; display: flex; justify-content: space-between; }
+  .group { display: flex; flex-direction: column; gap: 10px; }
+  .glabel { font-size: 13px; color: var(--subtext); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .glabel .badge { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
   
   input[type="text"] {
-    background: #1b1f2a; border: 1px solid var(--border); color: #e6e8ee;
-    border-radius: 8px; padding: 12px; font-size: 16px; width: 100%; outline: none; font-family: inherit;
+    background: #1b1f2a; border: 1px solid var(--border); color: #fff;
+    border-radius: 8px; padding: 14px; font-size: 18px; width: 100%; outline: none;
+    font-family: 'Inter', sans-serif; transition: 0.2s; letter-spacing: 1px;
   }
-  input[type="text"]:focus { border-color: var(--primary); }
+  input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
   
   select {
-    background: #1b1f2a; border: 1px solid var(--border); color: #e6e8ee;
+    background: #1b1f2a; border: 1px solid var(--border); color: var(--text);
     border-radius: 8px; padding: 10px; font-size: 13px; width: 100%; outline: none;
   }
 
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row span { font-size: 12px; color: var(--subtext); width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
   input[type="range"] {
     -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
-    background: #2a2f3d; outline: none; flex: 1;
+    background: var(--border); outline: none; flex: 1;
   }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
     background: var(--primary); cursor: pointer; border: 2px solid var(--panel);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }
-  .row { display: flex; align-items: center; gap: 10px; }
-  .row span { font-size: 12px; color: #7c8399; width: 40px; }
 
   button.primary {
     padding: 14px; border-radius: 10px; border: none; cursor: pointer;
     background: var(--primary); color: #fff; font-size: 15px; font-weight: 600;
-    transition: .2s;
+    transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px;
   }
   button.primary:hover:not(:disabled) { background: var(--primary-hover); }
-  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .tip { font-size: 11px; color: #fbbf24; line-height: 1.6; background: rgba(251, 191, 36, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.2); }
 
   /* 右侧画布 */
   .stage {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
-    padding: 20px; position: relative; overflow: hidden;
-    background: #11141a;
+    padding: 30px; position: relative; overflow: hidden;
+    background: #0b0d10; background-image: radial-gradient(circle at center, #1a1d24 0%, #0b0d10 100%);
   }
-  #cv { max-width: 100%; max-height: 100%; display: none; box-shadow: 0 10px 40px rgba(0,0,0,.5); cursor: move; }
+  #cv { max-width: 100%; max-height: 100%; display: none; box-shadow: 0 20px 60px rgba(0,0,0,0.6); cursor: move; }
   .empty {
-    text-align: center; color: #5c6377; font-size: 15px; line-height: 2;
-    cursor: pointer; padding: 60px; border: 2px dashed var(--border); border-radius: 16px;
+    text-align: center; color: var(--subtext); font-size: 15px; line-height: 2;
+    cursor: pointer; padding: 60px; border: 2px dashed var(--border); border-radius: 20px;
+    transition: 0.3s; background: rgba(22, 25, 32, 0.5);
   }
-  .empty:hover { border-color: var(--primary); color: #8a93a8; }
-  .tip { font-size: 11px; color: #f59e0b; line-height: 1.5; margin-top: 5px; }
+  .empty:hover { border-color: var(--primary); color: #fff; background: rgba(79, 70, 229, 0.05); }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="panel">
     <header class="brand">
-      <h1>像素级克隆改数字</h1>
-      <p>还原字体细节 · 完美覆盖</p>
+      <h1>1:1 智能克隆引擎</h1>
+      <p>自动测算原图字高、宽度、墨迹密度</p>
     </header>
 
-    <button class="primary" id="uploadBtn">1. 选择图片</button>
+    <button class="primary" id="uploadBtn">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4m4-5l5-5 5 5m-5-5v12"></path></svg>
+      选择原图
+    </button>
 
     <div class="group">
-      <div class="glabel">2. 输入新内容</div>
+      <div class="glabel">新数字内容 <span class="badge">实时预览</span></div>
       <input type="text" id="textInput" value="+8,888.88" spellcheck="false">
     </div>
 
     <div class="group">
-      <div class="glabel">3. 匹配字体风格</div>
+      <div class="glabel">字体特征匹配</div>
       <select id="fontSel">
-        <option value="Inter, sans-serif">Inter (现代 UI 极简)</option>
-        <option value="Roboto, sans-serif">Roboto (安卓/谷歌风)</option>
-        <option value="Arial, sans-serif">Arial (经典无衬线)</option>
-        <option value="Helvetica, sans-serif">Helvetica (苹果风)</option>
+        <option value="Inter, sans-serif">Inter (现代 UI 默认)</option>
+        <option value="Roboto, sans-serif">Roboto (安卓/谷歌)</option>
+        <option value="Oswald, sans-serif">Oswald (窄高/票据)</option>
+        <option value="Barlow Condensed, sans-serif">Barlow (紧凑)</option>
+        <option value="Share Tech Mono, monospace">Share Tech (等宽/代码)</option>
+        <option value="Arial, sans-serif">Arial (经典)</option>
       </select>
-      
-      <div class="row" style="margin-top:5px">
-        <span>字重</span>
-        <input type="range" id="weightRange" min="300" max="900" step="100" value="500">
-        <span id="weightVal" style="text-align:right">500</span>
-      </div>
-      
-      <div class="row">
-        <span>字距</span>
-        <input type="range" id="spacingRange" min="-5" max="10" step="0.5" value="0">
-        <span id="spacingVal" style="text-align:right">0</span>
-      </div>
+    </div>
 
-      <div class="row">
-        <span>缩放</span>
-        <input type="range" id="scaleRange" min="80" max="120" step="1" value="100">
-        <span id="scaleVal" style="text-align:right">100%</span>
+    <div class="group">
+      <div class="glabel">微调对齐 (可选)</div>
+      <div class="slider-row">
+        <span>字重</span>
+        <input type="range" id="weightRange" min="300" max="900" step="100" value="600">
+        <span id="weightVal">600</span>
+      </div>
+      <div class="slider-row">
+        <span>字宽</span>
+        <input type="range" id="scaleXRange" min="70" max="130" step="1" value="100">
+        <span id="scaleXVal">100%</span>
+      </div>
+      <div class="slider-row">
+        <span>高度</span>
+        <input type="range" id="scaleYRange" min="70" max="130" step="1" value="100">
+        <span id="scaleYVal">100%</span>
+      </div>
+      <div class="slider-row">
+        <span>字距</span>
+        <input type="range" id="spacingRange" min="-10" max="20" step="0.5" value="0">
+        <span id="spacingVal">0</span>
       </div>
     </div>
 
-    <div class="tip">💡 提示：生成后，可以用键盘的 ↑↓←→ 键进行 1 像素级别的微调对齐！</div>
+    <div class="tip">
+      💡 <b>一键完美：</b>程序已自动测算尺寸和颜色。若位置有 1~2 像素偏差，可在右侧画布直接拖动，或用键盘方向键微调。
+    </div>
 
-    <button class="primary" id="downloadBtn" disabled style="margin-top:10px">下载高清图片</button>
+    <button class="primary" id="downloadBtn" disabled style="margin-top:auto">下载无损原图</button>
   </aside>
 
   <main class="stage" id="stage">
     <div class="empty" id="empty">
-      <div style="font-size:40px;margin-bottom:10px">✨</div>
-      <div>点击上传图片</div>
+      <div style="font-size:48px;margin-bottom:12px">🪄</div>
+      <div>点击上传图片，自动进行像素级替换</div>
     </div>
     <canvas id="cv" tabindex="0"></canvas>
   </main>
@@ -152,174 +172,216 @@
   const textInput = $('textInput');
   const fontSel = $('fontSel');
   const weightRange = $('weightRange');
+  const scaleXRange = $('scaleXRange');
+  const scaleYRange = $('scaleYRange');
   const spacingRange = $('spacingRange');
-  const scaleRange = $('scaleRange');
   const downloadBtn = $('downloadBtn');
 
   const state = {
     img: null, W: 0, H: 0,
-    boxes: [], // 识别出的数字区域
+    targetBox: null, // 包含真实墨迹边界和颜色
     newText: '+8,888.88',
     font: 'Inter, sans-serif',
-    weight: 500,
-    spacing: 0,
-    scale: 1,
-    offsetX: 0,
-    offsetY: 0,
-    activeBoxIndex: 0 // 默认只修改第一个识别到的区域
+    weight: 600,
+    scaleX: 1, scaleY: 1, spacing: 0,
+    offsetX: 0, offsetY: 0
   };
 
   let worker = null;
   let isDragging = false;
   let dragStart = { x: 0, y: 0 };
 
-  // ================= 核心：提取完美的背景与前景色 =================
-  function analyzeRegion(box, imgData, W, H) {
-    const bgCounts = new Map();
-    const fgPixels = [];
-    const { x0, y0, x1, y1 } = box;
+  // ================= 1. 深度图像化验分析 =================
+  
+  // 获取真正的“墨迹”边界（去留白）
+  function getRealInkBounds(box, data, W, H) {
+    let minX = box.x1, maxX = box.x0, minY = box.y1, maxY = box.y0;
+    let fgCount = 0;
     
-    // 稍微扩大范围采样背景
-    const pad = 10;
-    for (let y = Math.max(0, y0 - pad); y < Math.min(H, y1 + pad); y++) {
-      for (let x = Math.max(0, x0 - pad); x < Math.min(W, x1 + pad); x++) {
-        // 判断是否在文字框内
-        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) continue; 
-        
-        const i = (y * W + x) * 4;
-        const key = ((imgData[i] >> 4) << 8) | ((imgData[i + 1] >> 4) << 4) | (imgData[i + 2] >> 4);
-        let c = bgCounts.get(key);
-        if (!c) { c = { n: 0, r: 0, g: 0, b: 0 }; bgCounts.set(key, c); }
-        c.n++; c.r += imgData[i]; c.g += imgData[i + 1]; c.b += imgData[i + 2];
-      }
+    // 采样背景色（取外围）
+    const outerBg = [255,255,255]; // 默认
+    const pad = 15;
+    let rSum=0, gSum=0, bSum=0, cnt=0;
+    for(let y=Math.max(0,box.y0-pad); y<Math.min(H,box.y1+pad); y++){
+        for(let x=Math.max(0,box.x0-pad); x<Math.min(W,box.x1+pad); x++){
+            if(x>=box.x0 && x<=box.x1 && y>=box.y0 && y<=box.y1) continue;
+            const i = (y*W+x)*4; rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
+        }
     }
+    if(cnt>0) { outerBg[0]=rSum/cnt; outerBg[1]=gSum/cnt; outerBg[2]=bSum/cnt; }
 
-    let bestBg = { n: 0, r: 255, g: 255, b: 255 };
-    bgCounts.forEach(c => { if (c.n > bestBg.n) bestBg = c; });
-    const bg = [Math.round(bestBg.r / bestBg.n), Math.round(bestBg.g / bestBg.n), Math.round(bestBg.b / bestBg.n)];
-
-    // 在框内寻找文字颜色
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
+    // 寻找真实边界
+    for (let y = Math.max(0, Math.floor(box.y0)); y < Math.min(H, box.y1); y++) {
+      for (let x = Math.max(0, Math.floor(box.x0)); x < Math.min(W, box.x1); x++) {
         const i = (y * W + x) * 4;
-        const r = imgData[i], g = imgData[i + 1], b = imgData[i + 2];
-        const diff = Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]);
-        if (diff > 150) { // 明显区别于背景的算作文字
-          fgPixels.push({ d: diff, r, g, b });
+        const r = data[i], g = data[i+1], b = data[i+2];
+        // 容差：与背景色的差异大于阈值，认为是文字
+        const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
+        if (diff > 80) {
+          fgCount++;
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
         }
       }
     }
 
+    // 若未找到（可能是纯色块），退回原框
+    if (fgCount < 10) return { ...box, inkRatio: 0, fg: [0,0,0], bg: outerBg };
+
+    const realW = Math.max(1, maxX - minX);
+    const realH = Math.max(1, maxY - minY);
+    const inkRatio = fgCount / (realW * realH); // 墨迹密度
+
+    // 在真实边界内寻找前景文字色（最深的像素均值）
+    const fgPixels = [];
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const i = (y * W + x) * 4;
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const diff = Math.abs(r - outerBg[0]) + Math.abs(g - outerBg[1]) + Math.abs(b - outerBg[2]);
+        fgPixels.push({ d: diff, r, g, b });
+      }
+    }
     fgPixels.sort((a, b) => b.d - a.d);
-    let fg = [0, 0, 0];
-    if (fgPixels.length > 0) {
-      const n = Math.max(1, Math.floor(fgPixels.length * 0.2)); // 取最黑的20%
-      let r = 0, g = 0, b = 0;
-      for (let i = 0; i < n; i++) { r += fgPixels[i].r; g += fgPixels[i].g; b += fgPixels[i].b; }
-      fg = [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+    let fg = [0,0,0];
+    if(fgPixels.length>0){
+        const topN = Math.max(1, Math.floor(fgPixels.length * 0.15)); // 取最深的 15%
+        let r=0,g=0,b=0; for(let i=0;i<topN;i++){ r+=fgPixels[i].r; g+=fgPixels[i].g; b+=fgPixels[i].b; }
+        fg = [Math.round(r/topN), Math.round(g/topN), Math.round(b/topN)];
     }
 
-    return { bg, fg };
+    return {
+      x0: minX, y0: minY, x1: maxX, y1: maxY,
+      w: realW, h: realH,
+      inkRatio, fg, bg: outerBg
+    };
   }
 
-  // ================= 精确绘制文字（支持字距调整） =================
+  // ================= 2. 核心高保真绘制 =================
+  
+  function getTextWidth(text, letterSpacing) {
+    let w = 0;
+    for (let i = 0; i < text.length; i++) w += ctx.measureText(text[i]).width + letterSpacing;
+    return w - (text.length > 0 ? letterSpacing : 0);
+  }
+
   function drawTextWithSpacing(text, x, y, letterSpacing) {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     let currentX = x;
-    
     for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      ctx.fillText(char, currentX, y);
-      currentX += ctx.measureText(char).width + letterSpacing;
+      ctx.fillText(text[i], currentX, y);
+      currentX += ctx.measureText(text[i]).width + letterSpacing;
     }
   }
 
-  // 获取文字总宽度
-  function getTextWidth(text, letterSpacing) {
-    let w = 0;
-    for (let i = 0; i < text.length; i++) {
-      w += ctx.measureText(text[i]).width + letterSpacing;
-    }
-    return w - letterSpacing;
-  }
-
-  // ================= 核心渲染 =================
   function renderResult() {
     if (!state.img) return;
     const W = state.W, H = state.H;
 
+    // 清空画布
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(state.img, 0, 0, W, H);
 
-    const box = state.boxes[state.activeBoxIndex];
+    const box = state.targetBox;
     if (!box) return;
 
-    // 1. 用算出的完美背景色，稍微扩大一点覆盖旧数字（彻底遮盖）
-    ctx.fillStyle = `rgb(${box.bg.join(',')})`;
-    // 扩大 15% 确保盖住边缘的抗锯齿像素
-    const coverPadX = box.w * 0.15;
-    const coverPadY = box.h * 0.15;
-    ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX * 2, box.h + coverPadY * 2);
+    // 1. 极简遮盖：只覆盖文字所在的真实墨迹边缘，加上 1~2 像素的羽化保护
+    ctx.fillStyle = `rgb(${box.bg.map(v=>Math.round(v)).join(',')})`;
+    const coverPadX = Math.max(1, box.w * 0.05);
+    const coverPadY = Math.max(1, box.h * 0.05);
+    ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX*2, box.h + coverPadY*2);
 
     // 2. 准备文字
     const text = state.newText;
     if (!text) return;
 
-    // 字体缩放计算
-    const fontSize = box.h * state.scale;
-    ctx.font = `${state.weight} ${fontSize}px ${state.font}`;
-    ctx.fillStyle = `rgb(${box.fg.join(',')})`;
-
-    // 3. 排版与居中计算
-    const spacing = state.spacing * (fontSize / 100); // 相对字距
-    const textWidth = getTextWidth(text, spacing);
+    // 3. 核心计算：让字体物理高度绝对等于原图物理高度
+    ctx.font = `${state.weight} 100px ${state.font}`;
+    // 使用度量数据获取 "100px" 下文字的真实墨迹高度
+    const metrics = ctx.measureText(text);
+    const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
     
-    // 原框中心点 + 手动偏移
+    // 计算出完美字号
+    let baseFontSize = 100;
+    if (rawH > 0) {
+      baseFontSize = (box.h / rawH) * 100;
+    }
+
+    // 4. 宽高自适应（如果输入的文字比原图长，自动压缩字宽，保持不外溢）
+    ctx.font = `${state.weight} ${baseFontSize}px ${state.font}`;
+    const spacing = state.spacing * (baseFontSize / 100);
+    const rawW = getTextWidth(text, spacing);
+    
+    // 计算宽高比缩放
+    let finalScaleX = state.scaleX;
+    let finalScaleY = state.scaleY;
+
+    // 限制最大宽度为原框宽度的 1.25 倍，防止完全破坏排版（如需更宽可以放开）
+    if (rawW > box.w * 1.25 && state.scaleX === 1) {
+        finalScaleX = (box.w * 1.25) / rawW;
+    }
+
+    ctx.save();
+    
+    // 设定中心点 + 手动偏移
     const centerX = box.x0 + box.w / 2 + state.offsetX;
     const centerY = box.y0 + box.h / 2 + state.offsetY;
+    
+    // 应用横向和纵向缩放
+    ctx.translate(centerX, centerY);
+    ctx.scale(finalScaleX, finalScaleY);
+    ctx.translate(-centerX, -centerY);
 
-    // 起点 X（向左推半个总宽度）
-    const startX = centerX - textWidth / 2;
+    // 应用颜色
+    ctx.fillStyle = `rgb(${box.fg.join(',')})`;
 
-    // 绘制新文字
-    drawTextWithSpacing(text, startX, centerY, spacing);
+    // 绘制（起始点居中）
+    const drawW = rawW * finalScaleX;
+    const startX = centerX - drawW / 2;
+    
+    // 调整 Y 轴基点：让文字的视觉中心对齐框的中心
+    // actualBoundingBoxAscent 是基线到顶部的距离
+    const yOffset = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
+    const finalY = centerY + yOffset * finalScaleY;
+
+    drawTextWithSpacing(text, startX, finalY, spacing);
+
+    ctx.restore();
   }
 
-  // ================= OCR 识别引擎 =================
+  // ================= 3. OCR 识别 =================
   async function runOCR() {
-    // 1. 预处理图片（放大以提高 OCR 精度）
-    const ocrMax = 2000;
-    const os = Math.min(1.5, ocrMax / Math.max(state.W, state.H));
+    const os = Math.min(2.0, 2000 / Math.max(state.W, state.H)); // 放大以提高识别率
     const oc = document.createElement('canvas');
-    oc.width = Math.max(1, Math.round(state.W * os));
-    oc.height = Math.max(1, Math.round(state.H * os));
+    oc.width = Math.round(state.W * os);
+    oc.height = Math.round(state.H * os);
     const octx = oc.getContext('2d');
+    
+    // 增强对比度，利于二值化识别
+    octx.filter = 'contrast(1.5) grayscale(1)';
     octx.drawImage(state.img, 0, 0, oc.width, oc.height);
 
     if (!worker) {
       worker = await Tesseract.createWorker('eng', 1, {
         logger: m => {
           if (m.status === 'recognizing text') {
-            emptyEl.innerHTML = `<div>识别中... ${Math.round(m.progress*100)}%</div>`;
+            emptyEl.innerHTML = `<div>AI 正在分析像素特征... ${Math.round(m.progress*100)}%</div>`;
           }
         }
       });
     }
 
-    // 限制只识别数字和符号
-    await worker.setParameters({
-      tessedit_char_whitelist: '0123456789.,+$%',
-    });
-
+    await worker.setParameters({ tessedit_char_whitelist: '0123456789.,+-$%' });
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    // 获取所有识别出的文本块
-    const words = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 20);
+    const words = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30);
     
-    // 合并相邻的数字
-    const boxes = [];
+    // 找到面积最大的那个连续数字区域（往往是主数字）
+    let targetBox = null;
+    let maxArea = 0;
+
     for (const w of words) {
       const box = {
         x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
@@ -327,47 +389,30 @@
       };
       box.w = box.x1 - box.x0;
       box.h = box.y1 - box.y0;
+      const area = box.w * box.h;
       
-      // 如果高度太小，可能是噪点
-      if (box.h < 10 || box.w < 10) continue;
-
-      // 尝试与上一个合并（如果在同一水平线）
-      if (boxes.length > 0) {
-        const prev = boxes[boxes.length - 1];
-        const overlapY = Math.min(prev.y1, box.y1) - Math.max(prev.y0, box.y0);
-        if (overlapY > Math.min(prev.h, box.h) * 0.5) {
-          // 合并
-          prev.x0 = Math.min(prev.x0, box.x0);
-          prev.x1 = Math.max(prev.x1, box.x1);
-          prev.y0 = Math.min(prev.y0, box.y0);
-          prev.y1 = Math.max(prev.y1, box.y1);
-          prev.w = prev.x1 - prev.x0;
-          prev.h = prev.y1 - prev.y0;
-          continue;
-        }
+      if (box.h > 10 && area > maxArea) {
+        maxArea = area;
+        targetBox = box;
       }
-      boxes.push(box);
     }
 
-    // 如果没有识别出大块，就把整个图当作一个框
-    if (boxes.length === 0) {
-      boxes.push({ x0: state.W*0.1, y0: state.H*0.1, x1: state.W*0.9, y1: state.H*0.9, w: state.W*0.8, h: state.H*0.8 });
+    // 如果没找到，把整张图当做目标
+    if (!targetBox) {
+      targetBox = { x0: state.W*0.1, y0: state.H*0.4, x1: state.W*0.9, y1: state.H*0.6, w: state.W*0.8, h: state.H*0.2 };
     }
 
-    // 分析每个框的色彩
+    // 深度分析色彩和边界
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
-    return boxes.map(box => {
-      const colors = analyzeRegion(box, imgData, state.W, state.H);
-      return { ...box, ...colors };
-    });
+    return getRealInkBounds(targetBox, imgData, state.W, state.H);
   }
 
-  // ================= 事件绑定 =================
+  // ================= 4. 事件处理 =================
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     
     emptyEl.style.display = 'block';
-    emptyEl.innerHTML = `<div>正在读取...</div>`;
+    emptyEl.innerHTML = `<div>正在载入...</div>`;
     canvas.style.display = 'none';
 
     const url = URL.createObjectURL(file);
@@ -375,6 +420,7 @@
     
     im.onload = async () => {
       state.img = im;
+      // 限制最大尺寸，防止手机卡死
       const maxSide = 2000;
       const scale = Math.min(1, maxSide / Math.max(im.width, im.height));
       state.W = Math.round(im.width * scale);
@@ -385,19 +431,24 @@
       ctx.drawImage(im, 0, 0, state.W, state.H);
       
       try {
-        state.boxes = await runOCR();
+        state.targetBox = await runOCR();
         
-        // 默认选中面积最大的那个框
-        if (state.boxes.length > 0) {
-          let maxArea = 0, maxIdx = 0;
-          state.boxes.forEach((b, i) => {
-            if (b.w * b.h > maxArea) { maxArea = b.w * b.h; maxIdx = i; }
-          });
-          state.activeBoxIndex = maxIdx;
+        // 智能预判字重
+        if (state.targetBox.inkRatio > 0.25) {
+          weightRange.value = 700;
+        } else if (state.targetBox.inkRatio < 0.1) {
+          weightRange.value = 400;
+        } else {
+          weightRange.value = 600;
         }
+        $('weightVal').textContent = weightRange.value;
+        state.weight = parseInt(weightRange.value);
 
-        state.offsetX = 0;
-        state.offsetY = 0;
+        state.offsetX = 0; state.offsetY = 0;
+        state.scaleX = 1; state.scaleY = 1;
+        scaleXRange.value = 100; scaleYRange.value = 100;
+        $('scaleXVal').textContent = '100%'; $('scaleYVal').textContent = '100%';
+        
         renderResult();
         
         emptyEl.style.display = 'none';
@@ -406,7 +457,7 @@
         downloadBtn.disabled = false;
         
       } catch (err) {
-        alert("识别失败，请重试");
+        alert("识别失败: " + err.message);
         emptyEl.innerHTML = `<div>识别失败，请重试</div>`;
       }
       URL.revokeObjectURL(url);
@@ -416,35 +467,21 @@
 
   $('uploadBtn').onclick = () => fileInput.click();
   emptyEl.onclick = () => fileInput.click();
-  
   fileInput.onchange = e => {
     if (e.target.files[0]) handleFile(e.target.files[0]);
     fileInput.value = '';
   };
 
-  // 输入控制
+  // 实时参数绑定
   textInput.oninput = e => { state.newText = e.target.value; renderResult(); };
   fontSel.onchange = e => { state.font = e.target.value; renderResult(); };
   
-  weightRange.oninput = e => {
-    state.weight = parseInt(e.target.value);
-    $('weightVal').textContent = state.weight;
-    renderResult();
-  };
-  
-  spacingRange.oninput = e => {
-    state.spacing = parseFloat(e.target.value);
-    $('spacingVal').textContent = state.spacing;
-    renderResult();
-  };
-  
-  scaleRange.oninput = e => {
-    state.scale = parseInt(e.target.value) / 100;
-    $('scaleVal').textContent = e.target.value + '%';
-    renderResult();
-  };
+  weightRange.oninput = e => { state.weight = parseInt(e.target.value); $('weightVal').textContent = e.target.value; renderResult(); };
+  scaleXRange.oninput = e => { state.scaleX = parseInt(e.target.value) / 100; $('scaleXVal').textContent = e.target.value + '%'; renderResult(); };
+  scaleYRange.oninput = e => { state.scaleY = parseInt(e.target.value) / 100; $('scaleYVal').textContent = e.target.value + '%'; renderResult(); };
+  spacingRange.oninput = e => { state.spacing = parseFloat(e.target.value); $('spacingVal').textContent = e.target.value; renderResult(); };
 
-  // 手动微调：拖拽画布
+  // 鼠标拖拽 1px 对齐
   canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
     isDragging = true;
@@ -456,14 +493,10 @@
     if (!isDragging) return;
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
-    
-    // 将屏幕像素移动转换为画布像素移动
     const rect = canvas.getBoundingClientRect();
-    const scaleX = state.W / rect.width;
-    const scaleY = state.H / rect.height;
     
-    state.offsetX += dx * scaleX;
-    state.offsetY += dy * scaleY;
+    state.offsetX += dx * (state.W / rect.width);
+    state.offsetY += dy * (state.H / rect.height);
     
     dragStart = { x: e.clientX, y: e.clientY };
     renderResult();
@@ -474,21 +507,16 @@
     canvas.releasePointerCapture(e.pointerId);
   });
 
-  // 手动微调：键盘方向键
+  // 键盘方向键微调
   canvas.addEventListener('keydown', e => {
     if (!state.img) return;
-    const step = e.shiftKey ? 10 : 1; // 按住 Shift 加速
+    const step = e.shiftKey ? 10 : 1;
     let moved = false;
-    
     if (e.key === 'ArrowLeft') { state.offsetX -= step; moved = true; }
     if (e.key === 'ArrowRight') { state.offsetX += step; moved = true; }
     if (e.key === 'ArrowUp') { state.offsetY -= step; moved = true; }
     if (e.key === 'ArrowDown') { state.offsetY += step; moved = true; }
-    
-    if (moved) {
-      e.preventDefault();
-      renderResult();
-    }
+    if (moved) { e.preventDefault(); renderResult(); }
   });
 
   downloadBtn.onclick = () => {
@@ -496,14 +524,14 @@
     canvas.toBlob(blob => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = '完美改数字_' + Date.now() + '.png';
+      a.download = '完美克隆_' + Date.now() + '.png';
       a.click();
     }, 'image/png');
   };
 
-  // 拖拽支持
+  // 拖拽上传
   ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => {
-    e.preventDefault(); stage.style.border = '2px dashed #3b82f6';
+    e.preventDefault(); stage.style.border = '2px dashed #4f46e5';
   }));
   ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => {
     e.preventDefault(); stage.style.border = 'none';
