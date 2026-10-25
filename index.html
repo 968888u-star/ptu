@@ -24,7 +24,6 @@
   }
   .app { display: flex; height: 100vh; }
 
-  /* 左侧面板 */
   .panel {
     width: 380px; flex: none; padding: 24px 20px;
     background: var(--panel); border-right: 1px solid var(--border);
@@ -63,7 +62,6 @@
   }
   button.success:hover { background: #059669; }
 
-  /* 右侧画布 */
   .stage {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
     padding: 20px; position: relative; overflow: hidden;
@@ -78,7 +76,6 @@
   }
   .empty:hover { border-color: var(--primary); color: #fff; background: rgba(79, 70, 229, 0.05); }
   
-  /* 提示框 */
   #toast {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
     background: var(--success); color: #fff; padding: 8px 16px; border-radius: 20px;
@@ -92,7 +89,7 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>行级精准覆盖 · 彻底解决重叠与漏改</p>
+      <p>精确消除残影 · 修复时间丢失 · 全自动替换</p>
       <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
     </header>
 
@@ -101,10 +98,10 @@
     <div class="group">
       <div class="glabel">2. 修改核心信息 (实时预览)</div>
       <input type="text" id="inputAmount" placeholder="金额" spellcheck="false">
-      <input type="text" id="inputTime" placeholder="时间 (若识别失败请手动输入)" spellcheck="false">
+      <input type="text" id="inputTime" placeholder="时间 (若未替换请手动输入)" spellcheck="false">
       <input type="text" id="inputOrderId" placeholder="订单号" spellcheck="false">
       <input type="text" id="inputName" placeholder="顶部名字" spellcheck="false">
-      <input type="text" id="inputAccount" placeholder="对方账户 (只需填邮箱部分)" spellcheck="false">
+      <input type="text" id="inputAccount" placeholder="对方账户 (只填邮箱部分)" spellcheck="false">
     </div>
 
     <button class="primary success" id="generateBtn">✨ 一键全套随机生成</button>
@@ -165,7 +162,7 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 像素级图像化验 =================
+  // ================= 1. 深度图像化验分析 =================
   function analyzeRegion(box, data, W, H) {
     const bx0 = Math.floor(box.x0);
     const bx1 = Math.ceil(box.x1);
@@ -203,6 +200,7 @@
 
     if (fgCount < 10) return { ...box, fg: [0,0,0], bg: outerBg };
 
+    // 提取文字真实颜色
     const fgPixels = [];
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -227,7 +225,7 @@
     };
   }
 
-  // ================= 2. 渲染引擎 =================
+  // ================= 2. 渲染引擎 (修复重叠问题) =================
   function renderResult() {
     if (!state.img) return;
     const W = state.W, H = state.H;
@@ -244,9 +242,15 @@
       // 1. 彻底清空原行区域 (涂白)
       const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${bgStr})`;
-      // 向四周扩大涂改范围，确保不留残影
-      const padX = Math.max(4, box.w * 0.05); 
-      const padY = Math.max(2, box.h * 0.2);
+      
+      // 加大涂改范围，彻底消灭重影
+      let padX = Math.max(6, box.w * 0.05); 
+      let padY = Math.max(4, box.h * 0.2);
+      if (box.type === 'name') {
+          padX = Math.max(15, box.w * 0.2); // 名字区域涂改范围放大，覆盖原箭头
+          padY = Math.max(8, box.h * 0.3);
+      }
+      
       ctx.fillRect(box.x0 - padX, box.y0 - padY, box.w + padX*2, box.h + padY*2);
 
       // 2. 计算字号
@@ -258,27 +262,29 @@
       const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
       let finalFontSize = rawH > 0 ? (box.h / rawH) * 100 : 100;
       
-      // 确保文字长度不超过原区域的 1.2 倍 (如果超了缩字号)
+      // 确保文字长度不超过原区域的 1.1 倍
       ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
       const textWidth = ctx.measureText(text).width;
-      if (textWidth > box.w * 1.2) {
-          finalFontSize = finalFontSize * (box.w * 1.2 / textWidth);
+      if (textWidth > box.w * 1.1) {
+          finalFontSize = finalFontSize * (box.w * 1.1 / textWidth);
       }
 
       // 3. 绘制新文字
       ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
       const fgStr = box.fg.map(v => isNaN(v) ? 0 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${fgStr})`;
-      ctx.textAlign = 'left'; // 针对长文本，统一左对齐更自然
       ctx.textBaseline = 'middle';
 
-      // 如果是金额、顶部名字，且没有手动偏移，让它居中
-      if (box.type === 'amount' && !box.offsetX) {
+      // 金额、顶部名字居中；单号、时间、邮箱左对齐
+      if (box.type === 'amount' || box.type === 'name') {
           ctx.textAlign = 'center';
+      } else {
+          ctx.textAlign = 'left';
       }
 
       const centerY = box.y0 + box.h / 2 + (box.offsetY || 0);
       let startX = box.x0 + (box.offsetX || 0);
+      
       if (ctx.textAlign === 'center') {
           startX = box.x0 + box.w / 2 + (box.offsetX || 0);
       }
@@ -296,7 +302,7 @@
     });
   }
 
-  // ================= 3. 行级智能提取 (大修复) =================
+  // ================= 3. 行级智能提取 (修复时间丢失与遮挡) =================
   async function runOCR() {
     const os = Math.min(1.5, 1600 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
@@ -312,7 +318,7 @@
           if (m.status === 'recognizing text') {
             emptyEl.innerHTML = `<div>正在解析图文... ${Math.round(m.progress*100)}%</div>`;
           } else if (m.status.includes('language')) {
-            emptyEl.innerHTML = `<div>加载字库(首次较慢)...</div>`;
+            emptyEl.innerHTML = `<div>加载中文字库...</div>`;
           }
         }
       });
@@ -321,7 +327,6 @@
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    // 收集所有识别到的单词
     const allWords = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30).map(w => {
         const b = {
             x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
@@ -345,36 +350,27 @@
         else if (w.text.includes('+') || w.text.includes('.')) {
             if (w.h > 20 && (!amountBox || w.w * w.h > amountBox.w * amountBox.h)) amountBox = w;
         }
+        else if (w.text.includes(':') || w.text.includes('-')) {
+            if (!timeBox || w.w > timeBox.w) timeBox = w;
+        }
     });
 
-    // 2. 核心修复：账户重叠问题
-    // 如果找到了包含 @ 的账户，我们要把跟它在同一行、且在它左边的词（比如名字）也吞并进来
-    if (accountBox) {
-        allWords.forEach(w => {
-            if (w === accountBox) return;
-            // 在同一水平线
-            const overlapY = Math.min(accountBox.y1, w.y1) - Math.max(accountBox.y0, w.y0);
-            if (overlapY > Math.min(accountBox.h, w.h) * 0.5) {
-                // 且在它左边不远处，说明是名字，需要合并涂改范围
-                if (w.x1 < accountBox.x0 && accountBox.x0 - w.x1 < 100) {
-                    accountBox.x0 = w.x0; // 把左侧边界往左推
-                    accountBox.w = accountBox.x1 - accountBox.x0;
-                }
-            }
-        });
+    // 【核心修复 1】：如果没找到时间，通过订单号的坐标强制生成一个时间区域
+    if (!timeBox && orderBox) {
+        timeBox = {
+            x0: orderBox.x0 - 20, // 稍微向左扩一点
+            y0: orderBox.y0 - orderBox.h * 1.8, // 通常时间在订单号上方 1.5 行左右
+            x1: orderBox.x1,
+            y1: orderBox.y0 - orderBox.h * 0.8
+        };
+        timeBox.w = timeBox.x1 - timeBox.x0;
+        timeBox.h = timeBox.y1 - timeBox.y0;
     }
 
-    // 3. 核心修复：时间没识别出来的问题
-    // 如果没找到带冒号的时间，就通过几何位置强猜：在金额下方，单号上方，高度相似的块
-    if (!timeBox) {
-        allWords.forEach(w => {
-            if (w.text.includes(':') || w.text.includes('-') || (/^\d{4,}$/.test(w.text) && w.w > 80)) {
-                if (!timeBox || w.w > timeBox.w) timeBox = w;
-            }
-        });
-    }
+    // 【核心修复 2】：取消强制吞噬账户左侧区域，保留“王志铭2”原样
+    // 之前有 accountBox.x0 = w.x0 导致左侧名字被抹掉，现移除。
 
-    // 4. 顶部名字
+    // 顶部名字
     if (amountBox) {
         let minDist = 9999;
         allWords.forEach(w => {
@@ -393,14 +389,6 @@
 
     const addRegion = (box, type) => {
         if (!box) return;
-        // 如果是时间和单号，强行向左拓展 x0 覆盖掉前缀（防止漏盖）
-        if (type === 'time' || type === 'orderId' || type === 'account') {
-            // 大多数账单标签在左侧 25% 的位置
-            // 为了安全，向左扩展 10% 的宽度，确保完全盖住原有内容
-            box.x0 = Math.max(0, box.x0 - box.w * 0.1);
-            box.w = box.x1 - box.x0;
-        }
-        
         const analyzed = analyzeRegion(box, imgData, state.W, state.H);
         analyzed.type = type; 
         analyzed.offsetX = 0; analyzed.offsetY = 0;
@@ -445,8 +433,7 @@
         inputAmount.value = ''; inputTime.value = ''; inputOrderId.value = '';
         inputName.value = ''; inputAccount.value = '';
 
-        // 自动跑一次随机，让用户马上看到效果
-        generateBtn.click();
+        generateBtn.click(); 
         
         emptyEl.style.display = 'none';
         canvas.style.display = 'block';
@@ -465,12 +452,6 @@
   generateBtn.onclick = () => {
     if (!state.img) return alert("请先上传图片！");
     
-    // 如果因为图片质量问题 OCR 没找到时间，根据用户的截图，这通常是固定的
-    const timeBoxExists = state.regions.some(r => r.type === 'time');
-    if (!timeBoxExists) {
-        showToast('⚠️ 时间未识别，请手动输入后点击空白处');
-    }
-
     const money = (Math.random() * 9000 + 100).toFixed(2);
     const amountStr = `+${Number(money).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     
@@ -490,7 +471,6 @@
     const domains = ['@163.com', '@qq.com', '@126.com', '@gmail.com'];
     const domain = domains[Math.floor(Math.random()*domains.length)];
     
-    // 账号只生成邮箱部分，左侧名字由原图覆盖逻辑处理
     const accountStr = `${mask}***${domain}`;
     const nameStr = `${randomName} >`;
 
@@ -507,7 +487,7 @@
     inputAccount.value = accountStr;
 
     renderResult();
-    showToast('✨ 全套演示数据已生成');
+    showToast('✨ 演示数据已生成');
   };
 
   $('uploadBtn').onclick = () => fileInput.click();
@@ -523,7 +503,6 @@
   inputName.oninput = e => { state.text.name = e.target.value; renderResult(); };
   inputAccount.oninput = e => { state.text.account = e.target.value; renderResult(); };
 
-  // 画布交互微调
   canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
     const rect = canvas.getBoundingClientRect();
@@ -533,7 +512,7 @@
     activeRegionIndex = -1;
     for (let i = state.regions.length - 1; i >= 0; i--) {
         const box = state.regions[i];
-        if (mx >= box.x0 - 10 && mx <= box.x1 + 10 && my >= box.y0 - 10 && my <= box.y1 + 10) {
+        if (mx >= box.x0 - 20 && mx <= box.x1 + 20 && my >= box.y0 - 20 && my <= box.y1 + 20) {
             activeRegionIndex = i;
             break;
         }
