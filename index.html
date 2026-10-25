@@ -89,7 +89,7 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>精确消除残影 · 修复时间丢失 · 全自动替换</p>
+      <p>画布级重绘 · 彻底解决重叠错位</p>
       <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
     </header>
 
@@ -98,10 +98,10 @@
     <div class="group">
       <div class="glabel">2. 修改核心信息 (实时预览)</div>
       <input type="text" id="inputAmount" placeholder="金额" spellcheck="false">
-      <input type="text" id="inputTime" placeholder="时间 (若未替换请手动输入)" spellcheck="false">
+      <input type="text" id="inputTime" placeholder="时间" spellcheck="false">
       <input type="text" id="inputOrderId" placeholder="订单号" spellcheck="false">
-      <input type="text" id="inputName" placeholder="顶部名字" spellcheck="false">
-      <input type="text" id="inputAccount" placeholder="对方账户 (只填邮箱部分)" spellcheck="false">
+      <input type="text" id="inputName" placeholder="顶部及对方名字" spellcheck="false">
+      <input type="text" id="inputAccount" placeholder="对方账户 (只需填邮箱部分)" spellcheck="false">
     </div>
 
     <button class="primary success" id="generateBtn">✨ 一键全套随机生成</button>
@@ -162,7 +162,7 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 深度图像化验分析 =================
+  // ================= 1. 深度图像化验分析 (超强校准) =================
   function analyzeRegion(box, data, W, H) {
     const bx0 = Math.floor(box.x0);
     const bx1 = Math.ceil(box.x1);
@@ -174,7 +174,7 @@
     
     // 取外围背景
     let rSum=0, gSum=0, bSum=0, cnt=0;
-    const pad = 10;
+    const pad = 15;
     for(let y=Math.max(0, by0-pad); y<Math.min(H, by1+pad); y++){
         for(let x=Math.max(0, bx0-pad); x<Math.min(W, bx1+pad); x++){
             if(x>=bx0 && x<=bx1 && y>=by0 && y<=by1) continue;
@@ -184,7 +184,7 @@
     }
     const outerBg = (cnt > 0 && !isNaN(rSum)) ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
 
-    // 寻找真实文字边界
+    // 寻找真实墨迹边界
     for (let y = Math.max(0, by0); y < Math.min(H, by1); y++) {
       for (let x = Math.max(0, bx0); x < Math.min(W, bx1); x++) {
         const i = (y * W + x) * 4;
@@ -219,13 +219,14 @@
     }
 
     return {
-      x0: minX, y0: minY, x1: maxX, y1: maxY,
-      w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY),
+      inkX0: minX, inkY0: minY, inkX1: maxX, inkY1: maxY,
+      inkW: Math.max(1, maxX - minX), inkH: Math.max(1, maxY - minY),
+      eraseX: bx0, eraseY: by0, eraseW: bx1 - bx0, eraseH: by1 - by0,
       fg, bg: outerBg
     };
   }
 
-  // ================= 2. 渲染引擎 (修复重叠问题) =================
+  // ================= 2. 渲染引擎 =================
   function renderResult() {
     if (!state.img) return;
     const W = state.W, H = state.H;
@@ -236,37 +237,38 @@
     const fontFam = `"PingFang SC", "Microsoft YaHei", "Inter", sans-serif`;
 
     state.regions.forEach((box, idx) => {
-      const text = state.text[box.type];
+      let text = state.text[box.type];
       if (!text) return; 
 
-      // 1. 彻底清空原行区域 (涂白)
+      // 核心修复：账户行合并名字和邮箱
+      if (box.type === 'account') {
+          // 去掉名字尾部的箭头，拼上邮箱
+          const pureName = state.text.name.replace(' >', '').trim(); 
+          text = `${pureName} ${text}`;
+      }
+
+      // 1. 强力擦除（向外扩大范围）
       const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${bgStr})`;
       
-      // 加大涂改范围，彻底消灭重影
-      let padX = Math.max(6, box.w * 0.05); 
-      let padY = Math.max(4, box.h * 0.2);
-      if (box.type === 'name') {
-          padX = Math.max(15, box.w * 0.2); // 名字区域涂改范围放大，覆盖原箭头
-          padY = Math.max(8, box.h * 0.3);
-      }
-      
-      ctx.fillRect(box.x0 - padX, box.y0 - padY, box.w + padX*2, box.h + padY*2);
+      const padX = 20; // 强制向左右多擦 20px
+      const padY = 5;  // 向上下多擦 5px
+      ctx.fillRect(box.eraseX - padX, box.eraseY - padY, box.eraseW + padX*2, box.eraseH + padY*2);
 
-      // 2. 计算字号
+      // 2. 计算字号（基于真实墨迹高度）
       let weight = 400;
       if (box.type === 'amount') weight = 600; 
 
       ctx.font = `${weight} 100px ${fontFam}`;
       const metrics = ctx.measureText(text);
       const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-      let finalFontSize = rawH > 0 ? (box.h / rawH) * 100 : 100;
+      let finalFontSize = rawH > 0 ? (box.inkH / rawH) * 100 : 100;
       
-      // 确保文字长度不超过原区域的 1.1 倍
       ctx.font = `${weight} ${finalFontSize}px ${fontFam}`;
       const textWidth = ctx.measureText(text).width;
-      if (textWidth > box.w * 1.1) {
-          finalFontSize = finalFontSize * (box.w * 1.1 / textWidth);
+      // 如果超出长度，等比缩小
+      if (textWidth > box.inkW * 1.1) {
+          finalFontSize = finalFontSize * (box.inkW * 1.1 / textWidth);
       }
 
       // 3. 绘制新文字
@@ -275,18 +277,18 @@
       ctx.fillStyle = `rgb(${fgStr})`;
       ctx.textBaseline = 'middle';
 
-      // 金额、顶部名字居中；单号、时间、邮箱左对齐
+      // 强制金额、顶部名字居中，其余左对齐
       if (box.type === 'amount' || box.type === 'name') {
           ctx.textAlign = 'center';
       } else {
           ctx.textAlign = 'left';
       }
 
-      const centerY = box.y0 + box.h / 2 + (box.offsetY || 0);
-      let startX = box.x0 + (box.offsetX || 0);
+      const centerY = box.inkY0 + box.inkH / 2 + (box.offsetY || 0);
+      let startX = box.inkX0 + (box.offsetX || 0);
       
       if (ctx.textAlign === 'center') {
-          startX = box.x0 + box.w / 2 + (box.offsetX || 0);
+          startX = box.inkX0 + box.inkW / 2 + (box.offsetX || 0);
       }
 
       const yOffset = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
@@ -297,12 +299,12 @@
       if (idx === activeRegionIndex) {
         ctx.strokeStyle = '#4f46e5';
         ctx.lineWidth = 2;
-        ctx.strokeRect(box.x0 - padX, box.y0 - padY, box.w + padX*2, box.h + padY*2);
+        ctx.strokeRect(box.inkX0 - 5, box.inkY0 - 5, box.inkW + 10, box.inkH + 10);
       }
     });
   }
 
-  // ================= 3. 行级智能提取 (修复时间丢失与遮挡) =================
+  // ================= 3. 行级智能提取 =================
   async function runOCR() {
     const os = Math.min(1.5, 1600 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
@@ -339,7 +341,7 @@
 
     let amountBox = null, timeBox = null, orderBox = null, accountBox = null, nameBox = null;
 
-    // 1. 基础特征锁定
+    // 分类
     allWords.forEach(w => {
         if (w.text.includes('@') || w.text.includes('*')) {
             if (!accountBox || w.w > accountBox.w) accountBox = w;
@@ -355,20 +357,31 @@
         }
     });
 
-    // 【核心修复 1】：如果没找到时间，通过订单号的坐标强制生成一个时间区域
+    // 如果没找到时间，强制根据单号的位置生成一个超长的时间遮罩区
     if (!timeBox && orderBox) {
         timeBox = {
-            x0: orderBox.x0 - 20, // 稍微向左扩一点
-            y0: orderBox.y0 - orderBox.h * 1.8, // 通常时间在订单号上方 1.5 行左右
-            x1: orderBox.x1,
+            x0: orderBox.x0 - 20, 
+            y0: orderBox.y0 - orderBox.h * 1.8, 
+            x1: orderBox.x0 + orderBox.w, // 跟单号等宽
             y1: orderBox.y0 - orderBox.h * 0.8
         };
         timeBox.w = timeBox.x1 - timeBox.x0;
         timeBox.h = timeBox.y1 - timeBox.y0;
     }
 
-    // 【核心修复 2】：取消强制吞噬账户左侧区域，保留“王志铭2”原样
-    // 之前有 accountBox.x0 = w.x0 导致左侧名字被抹掉，现移除。
+    // 账户行左侧扩展：如果找到了账户，把它左边的名字也包进来
+    if (accountBox) {
+        allWords.forEach(w => {
+            if (w === accountBox) return;
+            const overlapY = Math.min(accountBox.y1, w.y1) - Math.max(accountBox.y0, w.y0);
+            if (overlapY > Math.min(accountBox.h, w.h) * 0.5) {
+                if (w.x1 < accountBox.x0 && accountBox.x0 - w.x1 < 100) {
+                    accountBox.x0 = w.x0; // 向左延伸吞并名字
+                    accountBox.w = accountBox.x1 - accountBox.x0;
+                }
+            }
+        });
+    }
 
     // 顶部名字
     if (amountBox) {
@@ -404,7 +417,7 @@
     return regions;
   }
 
-  // ================= 4. 交互与数据生成 =================
+  // ================= 4. 交互与生成 =================
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     
@@ -512,7 +525,7 @@
     activeRegionIndex = -1;
     for (let i = state.regions.length - 1; i >= 0; i--) {
         const box = state.regions[i];
-        if (mx >= box.x0 - 20 && mx <= box.x1 + 20 && my >= box.y0 - 20 && my <= box.y1 + 20) {
+        if (mx >= box.inkX0 - 20 && mx <= box.inkX1 + 20 && my >= box.inkY0 - 20 && my <= box.inkY1 + 20) {
             activeRegionIndex = i;
             break;
         }
