@@ -3,184 +3,134 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>全自动改数字</title>
+<title>像素级克隆 · 改数字神器</title>
+<!-- 引入最接近现代 UI 截图的字体 -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --bg: #0f1115;
+    --panel: #161920;
+    --border: #2a2f3d;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #0f1115; color: #e6e8ee; height: 100vh; overflow: hidden;
+    background: var(--bg); color: #e6e8ee; height: 100vh; overflow: hidden;
     -webkit-font-smoothing: antialiased;
   }
   .app { display: flex; height: 100vh; }
 
   /* 左侧面板 */
   .panel {
-    width: 302px; flex: none; padding: 20px 18px;
-    background: #161920; border-right: 1px solid #242835;
-    display: flex; flex-direction: column; gap: 16px;
-    overflow-y: auto;
+    width: 340px; flex: none; padding: 20px 18px;
+    background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
   }
-  .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: .5px; }
+  .brand h1 { font-size: 18px; font-weight: 700; color: #fff; }
   .brand p { font-size: 12px; color: #7c8399; margin-top: 4px; }
 
-  .group { display: flex; flex-direction: column; gap: 9px; }
-  .glabel { font-size: 12px; color: #7c8399; font-weight: 600; letter-spacing: .3px; }
-
-  .row { display: flex; gap: 8px; align-items: center; }
-  .mini { font-size: 11.5px; color: #7c8399; min-width: 30px; }
-
-  input[type="text"], select {
-    background: #1b1f2a; border: 1px solid #2a2f3d; color: #e6e8ee;
-    border-radius: 9px; padding: 9px 10px; font-size: 13px;
-    font-family: inherit; outline: none; width: 100%; transition: .15s;
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .glabel { font-size: 12px; color: #7c8399; font-weight: 600; display: flex; justify-content: space-between; }
+  
+  input[type="text"] {
+    background: #1b1f2a; border: 1px solid var(--border); color: #e6e8ee;
+    border-radius: 8px; padding: 12px; font-size: 16px; width: 100%; outline: none; font-family: inherit;
   }
-  input[type="text"]:focus, select:focus { border-color: #3b82f6; background: #1e2331; }
+  input[type="text"]:focus { border-color: var(--primary); }
+  
+  select {
+    background: #1b1f2a; border: 1px solid var(--border); color: #e6e8ee;
+    border-radius: 8px; padding: 10px; font-size: 13px; width: 100%; outline: none;
+  }
 
   input[type="range"] {
     -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px;
     background: #2a2f3d; outline: none; flex: 1;
   }
   input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%;
-    background: #3b82f6; cursor: pointer; border: 2px solid #161920;
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--primary); cursor: pointer; border: 2px solid var(--panel);
   }
-
-  .check {
-    display: flex; align-items: center; gap: 8px; font-size: 12.5px;
-    color: #a6adc0; cursor: pointer; padding: 3px 0; user-select: none;
-  }
-  .check input { width: auto; accent-color: #3b82f6; cursor: pointer; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .row span { font-size: 12px; color: #7c8399; width: 40px; }
 
   button.primary {
-    padding: 13px; border-radius: 11px; border: none; cursor: pointer;
-    background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
-    font-size: 14px; font-weight: 600; font-family: inherit;
-    transition: .15s; box-shadow: 0 4px 16px rgba(59,130,246,.28);
+    padding: 14px; border-radius: 10px; border: none; cursor: pointer;
+    background: var(--primary); color: #fff; font-size: 15px; font-weight: 600;
+    transition: .2s;
   }
-  button.primary:hover:not(:disabled) { filter: brightness(1.1); }
-  button.primary:active:not(:disabled) { transform: translateY(1px); }
-  button.primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-
-  button.ghost {
-    padding: 10px; border-radius: 10px; border: 1px solid #2a2f3d;
-    background: #1b1f2a; color: #c8cddb; cursor: pointer;
-    font-size: 13px; font-family: inherit; transition: .15s;
-  }
-  button.ghost:hover { background: #232838; }
-
-  .progress { display: flex; flex-direction: column; gap: 6px; }
-  .bar { height: 6px; background: #232838; border-radius: 3px; overflow: hidden; }
-  .fill {
-    height: 100%; width: 0%; border-radius: 3px;
-    background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width .25s;
-  }
-  .status { font-size: 11.5px; color: #7c8399; }
-
-  .footnote { margin-top: auto; padding-top: 8px; font-size: 10.5px; color: #555b6e; line-height: 1.7; }
+  button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
 
   /* 右侧画布 */
   .stage {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
-    padding: 26px; position: relative; overflow: hidden;
-    background:
-      linear-gradient(45deg, #14171e 25%, transparent 25%, transparent 75%, #14171e 75%) 0 0 / 24px 24px,
-      linear-gradient(45deg, #14171e 25%, transparent 25%, transparent 75%, #14171e 75%) 12px 12px / 24px 24px,
-      #11141a;
+    padding: 20px; position: relative; overflow: hidden;
+    background: #11141a;
   }
-  .stage.dragover::after {
-    content: "松开鼠标载入图片";
-    position: absolute; inset: 16px; border: 2px dashed #3b82f6; border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(59,130,246,.08); color: #7fb0ff; font-size: 15px;
-    pointer-events: none;
-  }
-  #cv {
-    max-width: 100%; max-height: 100%; display: none;
-    box-shadow: 0 12px 50px rgba(0,0,0,.6); border-radius: 3px;
-    outline: none;
-  }
-  #cv.manual { cursor: crosshair; }
+  #cv { max-width: 100%; max-height: 100%; display: none; box-shadow: 0 10px 40px rgba(0,0,0,.5); cursor: move; }
   .empty {
-    text-align: center; color: #5c6377; font-size: 14px; line-height: 2;
-    cursor: pointer; user-select: none; padding: 46px;
-    border: 2px dashed #262b38; border-radius: 18px; transition: .2s;
+    text-align: center; color: #5c6377; font-size: 15px; line-height: 2;
+    cursor: pointer; padding: 60px; border: 2px dashed var(--border); border-radius: 16px;
   }
-  .empty:hover { border-color: #3b82f6; color: #8a93a8; }
-  .emptyIcon { font-size: 42px; margin-bottom: 8px; }
-
-  @media (max-width: 780px) {
-    .app { flex-direction: column; }
-    .panel { width: 100%; max-height: 48vh; border-right: none; border-bottom: 1px solid #242835; }
-    .stage { padding: 12px; }
-    .footnote { display: none; }
-  }
+  .empty:hover { border-color: var(--primary); color: #8a93a8; }
+  .tip { font-size: 11px; color: #f59e0b; line-height: 1.5; margin-top: 5px; }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="panel">
     <header class="brand">
-      <h1>全自动改数字</h1>
-      <p>上传图片 · 自动识别 · 一键替换</p>
+      <h1>像素级克隆改数字</h1>
+      <p>还原字体细节 · 完美覆盖</p>
     </header>
 
-    <button class="primary" id="uploadBtn">选择图片</button>
+    <button class="primary" id="uploadBtn">1. 选择图片</button>
 
     <div class="group">
-      <div class="glabel">新数字</div>
-      <input type="text" id="textInput" value="88.88" spellcheck="false" placeholder="输入要替换成的数字">
+      <div class="glabel">2. 输入新内容</div>
+      <input type="text" id="textInput" value="+8,888.88" spellcheck="false">
     </div>
 
     <div class="group">
-      <div class="glabel">样式</div>
+      <div class="glabel">3. 匹配字体风格</div>
       <select id="fontSel">
-        <option value="Arial, Helvetica, sans-serif">Arial</option>
-        <option value="Helvetica, Arial, sans-serif">Helvetica</option>
-        <option value="Verdana, sans-serif">Verdana</option>
-        <option value="Tahoma, sans-serif">Tahoma</option>
-        <option value="system-ui, sans-serif">系统字体</option>
-        <option value="'Times New Roman', serif">Times New Roman</option>
-        <option value="Georgia, serif">Georgia</option>
-        <option value="'Courier New', monospace">Courier New</option>
-        <option value="Impact, Haettenschweiler, sans-serif">Impact</option>
+        <option value="Inter, sans-serif">Inter (现代 UI 极简)</option>
+        <option value="Roboto, sans-serif">Roboto (安卓/谷歌风)</option>
+        <option value="Arial, sans-serif">Arial (经典无衬线)</option>
+        <option value="Helvetica, sans-serif">Helvetica (苹果风)</option>
       </select>
-      <div class="row">
-        <span class="mini">字号</span>
-        <input type="range" id="sizeRange" min="0.5" max="1.4" step="0.01" value="0.9">
-        <span class="mini" id="sizeVal" style="min-width:42px;text-align:right">0.90×</span>
+      
+      <div class="row" style="margin-top:5px">
+        <span>字重</span>
+        <input type="range" id="weightRange" min="300" max="900" step="100" value="500">
+        <span id="weightVal" style="text-align:right">500</span>
       </div>
+      
       <div class="row">
-        <span class="mini">对齐</span>
-        <select id="alignSel">
-          <option value="center">居中</option>
-          <option value="left">左对齐</option>
-          <option value="right">右对齐</option>
-        </select>
+        <span>字距</span>
+        <input type="range" id="spacingRange" min="-5" max="10" step="0.5" value="0">
+        <span id="spacingVal" style="text-align:right">0</span>
+      </div>
+
+      <div class="row">
+        <span>缩放</span>
+        <input type="range" id="scaleRange" min="80" max="120" step="1" value="100">
+        <span id="scaleVal" style="text-align:right">100%</span>
       </div>
     </div>
 
-    <div class="group">
-      <label class="check"><input type="checkbox" id="onlyLargest" checked> 仅替换最大的一处数字</label>
-      <label class="check"><input type="checkbox" id="manualMode"> 手动点击补写数字</label>
-    </div>
+    <div class="tip">💡 提示：生成后，可以用键盘的 ↑↓←→ 键进行 1 像素级别的微调对齐！</div>
 
-    <div class="progress" id="progressWrap" style="display:none">
-      <div class="bar"><div class="fill" id="progressBar"></div></div>
-      <div class="status" id="statusText">准备中…</div>
-    </div>
-
-    <button class="primary" id="downloadBtn" disabled>下载图片</button>
-    <button class="ghost" id="clearBtn">清空重来</button>
-
-    <div class="footnote">
-      本工具仅用于个人学习、表情包与设计草稿，请勿用于伪造证件、票据、流水等非法用途。
-    </div>
+    <button class="primary" id="downloadBtn" disabled style="margin-top:10px">下载高清图片</button>
   </aside>
 
   <main class="stage" id="stage">
     <div class="empty" id="empty">
-      <div class="emptyIcon">🖼️</div>
-      <div>点击选择图片，或把图片拖进来</div>
+      <div style="font-size:40px;margin-bottom:10px">✨</div>
+      <div>点击上传图片</div>
     </div>
     <canvas id="cv" tabindex="0"></canvas>
   </main>
@@ -194,175 +144,155 @@
   'use strict';
 
   const $ = id => document.getElementById(id);
-
-  const canvas      = $('cv');
-  const ctx         = canvas.getContext('2d', { willReadFrequently: true });
-  const stage       = $('stage');
-  const emptyEl     = $('empty');
-  const fileInput   = $('fileInput');
-  const uploadBtn   = $('uploadBtn');
-  const textInput   = $('textInput');
-  const fontSel     = $('fontSel');
-  const sizeRange   = $('sizeRange');
-  const sizeVal     = $('sizeVal');
-  const alignSel    = $('alignSel');
-  const onlyLargest = $('onlyLargest');
-  const manualMode  = $('manualMode');
-  const progressWrap= $('progressWrap');
-  const progressBar = $('progressBar');
-  const statusText  = $('statusText');
+  const canvas = $('cv');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const stage = $('stage');
+  const emptyEl = $('empty');
+  const fileInput = $('fileInput');
+  const textInput = $('textInput');
+  const fontSel = $('fontSel');
+  const weightRange = $('weightRange');
+  const spacingRange = $('spacingRange');
+  const scaleRange = $('scaleRange');
   const downloadBtn = $('downloadBtn');
-  const clearBtn    = $('clearBtn');
 
   const state = {
     img: null, W: 0, H: 0,
-    groups: [],
-    newText: '88.88',
-    font: 'Arial, Helvetica, sans-serif',
-    sizeScale: 0.9,
-    align: 'center',
-    onlyLargest: true,
-    manualOps: [],
-    manualMode: false,
-    busy: false
+    boxes: [], // 识别出的数字区域
+    newText: '+8,888.88',
+    font: 'Inter, sans-serif',
+    weight: 500,
+    spacing: 0,
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    activeBoxIndex: 0 // 默认只修改第一个识别到的区域
   };
 
   let worker = null;
-  let renderTimer = null;
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
 
-  /* ================= 工具 ================= */
-
-  function setStatus(t) { statusText.textContent = t; }
-  function setProgress(p) { progressBar.style.width = (p * 100) + '%'; }
-
-  function showProgress(msg) {
-    progressWrap.style.display = 'flex';
-    setStatus(msg);
-    setProgress(0);
-  }
-  function hideProgress() { progressWrap.style.display = 'none'; }
-
-  function scheduleRender() {
-    clearTimeout(renderTimer);
-    renderTimer = setTimeout(renderResult, 60);
-  }
-
-  function loadImageFile(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const im = new Image();
-      im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
-      im.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片加载失败')); };
-      im.src = url;
-    });
-  }
-
-  /* ================= 颜色采样 ================= */
-
-  function sampleBg(x, y, w, h, data, W, H) {
-    const counts = new Map();
-    const minSide = Math.min(w, h);
-    const inner = Math.max(1, Math.round(minSide * 0.04));
-    const outer = inner + Math.max(3, Math.round(minSide * 0.14));
-    const step = Math.max(1, Math.floor(minSide / 48));
-
-    for (let yy = y - outer; yy <= y + h + outer; yy += step) {
-      if (yy < 0 || yy >= H) continue;
-      for (let xx = x - outer; xx <= x + w + outer; xx += step) {
-        if (xx < 0 || xx >= W) continue;
-        const dx = xx < x ? x - xx : (xx >= x + w ? xx - (x + w) + 1 : 0);
-        const dy = yy < y ? y - yy : (yy >= y + h ? yy - (y + h) + 1 : 0);
-        const d = Math.max(dx, dy);
-        if (d < inner || d > outer) continue;
-        const i = (yy * W + xx) * 4;
-        const key = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
-        let c = counts.get(key);
-        if (!c) { c = { n: 0, r: 0, g: 0, b: 0 }; counts.set(key, c); }
-        c.n++; c.r += data[i]; c.g += data[i + 1]; c.b += data[i + 2];
+  // ================= 核心：提取完美的背景与前景色 =================
+  function analyzeRegion(box, imgData, W, H) {
+    const bgCounts = new Map();
+    const fgPixels = [];
+    const { x0, y0, x1, y1 } = box;
+    
+    // 稍微扩大范围采样背景
+    const pad = 10;
+    for (let y = Math.max(0, y0 - pad); y < Math.min(H, y1 + pad); y++) {
+      for (let x = Math.max(0, x0 - pad); x < Math.min(W, x1 + pad); x++) {
+        // 判断是否在文字框内
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) continue; 
+        
+        const i = (y * W + x) * 4;
+        const key = ((imgData[i] >> 4) << 8) | ((imgData[i + 1] >> 4) << 4) | (imgData[i + 2] >> 4);
+        let c = bgCounts.get(key);
+        if (!c) { c = { n: 0, r: 0, g: 0, b: 0 }; bgCounts.set(key, c); }
+        c.n++; c.r += imgData[i]; c.g += imgData[i + 1]; c.b += imgData[i + 2];
       }
     }
 
-    let best = null;
-    counts.forEach(c => { if (!best || c.n > best.n) best = c; });
+    let bestBg = { n: 0, r: 255, g: 255, b: 255 };
+    bgCounts.forEach(c => { if (c.n > bestBg.n) bestBg = c; });
+    const bg = [Math.round(bestBg.r / bestBg.n), Math.round(bestBg.g / bestBg.n), Math.round(bestBg.b / bestBg.n)];
 
-    if (!best) {
-      const cx = Math.min(W - 1, Math.max(0, Math.floor(x)));
-      const cy = Math.min(H - 1, Math.max(0, Math.floor(y)));
-      const i = (cy * W + cx) * 4;
-      return [data[i], data[i + 1], data[i + 2]];
-    }
-    return [Math.round(best.r / best.n), Math.round(best.g / best.n), Math.round(best.b / best.n)];
-  }
-
-  function sampleFg(x, y, w, h, data, bg, W, H) {
-    const arr = [];
-    const step = Math.max(1, Math.floor(Math.min(w, h) / 60));
-    for (let yy = y + 1; yy < y + h - 1; yy += step) {
-      if (yy < 0 || yy >= H) continue;
-      for (let xx = x + 1; xx < x + w - 1; xx += step) {
-        if (xx < 0 || xx >= W) continue;
-        const i = (yy * W + xx) * 4;
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const d = Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]);
-        arr.push({ d, r, g, b });
-      }
-    }
-    if (!arr.length) return [0, 0, 0];
-    arr.sort((a, b) => b.d - a.d);
-    const n = Math.max(1, Math.floor(arr.length * 0.12));
-    let r = 0, g = 0, b = 0;
-    for (let i = 0; i < n; i++) { r += arr[i].r; g += arr[i].g; b += arr[i].b; }
-    return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
-  }
-
-  /* ================= OCR 与分组 ================= */
-
-  function groupWords(words) {
-    if (!words.length) return [];
-    const items = words.map(w => ({
-      x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1,
-      cx: (w.x0 + w.x1) / 2,
-      cy: (w.y0 + w.y1) / 2
-    })).sort((a, b) => a.cy - b.cy || a.x0 - b.x0);
-
-    const groups = [];
-    for (const it of items) {
-      let target = null;
-      for (const g of groups) {
-        const overlap = Math.min(g.y1, it.y1) - Math.max(g.y0, it.y0);
-        const minH = Math.min(g.y1 - g.y0, it.y1 - it.y0);
-        if (overlap > minH * 0.45) {
-          const gap = Math.max(it.x0 - g.x1, g.x0 - it.x1);
-          const maxH = Math.max(g.y1 - g.y0, it.y1 - it.y0);
-          if (gap < maxH * 1.6) { target = g; break; }
+    // 在框内寻找文字颜色
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const i = (y * W + x) * 4;
+        const r = imgData[i], g = imgData[i + 1], b = imgData[i + 2];
+        const diff = Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]);
+        if (diff > 150) { // 明显区别于背景的算作文字
+          fgPixels.push({ d: diff, r, g, b });
         }
       }
-      if (target) {
-        target.x0 = Math.min(target.x0, it.x0);
-        target.y0 = Math.min(target.y0, it.y0);
-        target.x1 = Math.max(target.x1, it.x1);
-        target.y1 = Math.max(target.y1, it.y1);
-      } else {
-        groups.push({ x0: it.x0, y0: it.y0, x1: it.x1, y1: it.y1 });
-      }
     }
 
-    return groups.map(g => ({
-      x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1,
-      w: g.x1 - g.x0,
-      h: g.y1 - g.y0
-    })).filter(g => g.w > 4 && g.h > 6);
+    fgPixels.sort((a, b) => b.d - a.d);
+    let fg = [0, 0, 0];
+    if (fgPixels.length > 0) {
+      const n = Math.max(1, Math.floor(fgPixels.length * 0.2)); // 取最黑的20%
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < n; i++) { r += fgPixels[i].r; g += fgPixels[i].g; b += fgPixels[i].b; }
+      fg = [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+    }
+
+    return { bg, fg };
   }
 
-  async function runOCR() {
-    if (typeof Tesseract === 'undefined') {
-      throw new Error('OCR 引擎加载失败，请检查网络后刷新页面');
+  // ================= 精确绘制文字（支持字距调整） =================
+  function drawTextWithSpacing(text, x, y, letterSpacing) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    let currentX = x;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      ctx.fillText(char, currentX, y);
+      currentX += ctx.measureText(char).width + letterSpacing;
     }
+  }
 
-    const ocrMax = 1600;
-    const os = Math.min(1, ocrMax / Math.max(state.W, state.H));
+  // 获取文字总宽度
+  function getTextWidth(text, letterSpacing) {
+    let w = 0;
+    for (let i = 0; i < text.length; i++) {
+      w += ctx.measureText(text[i]).width + letterSpacing;
+    }
+    return w - letterSpacing;
+  }
+
+  // ================= 核心渲染 =================
+  function renderResult() {
+    if (!state.img) return;
+    const W = state.W, H = state.H;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(state.img, 0, 0, W, H);
+
+    const box = state.boxes[state.activeBoxIndex];
+    if (!box) return;
+
+    // 1. 用算出的完美背景色，稍微扩大一点覆盖旧数字（彻底遮盖）
+    ctx.fillStyle = `rgb(${box.bg.join(',')})`;
+    // 扩大 15% 确保盖住边缘的抗锯齿像素
+    const coverPadX = box.w * 0.15;
+    const coverPadY = box.h * 0.15;
+    ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX * 2, box.h + coverPadY * 2);
+
+    // 2. 准备文字
+    const text = state.newText;
+    if (!text) return;
+
+    // 字体缩放计算
+    const fontSize = box.h * state.scale;
+    ctx.font = `${state.weight} ${fontSize}px ${state.font}`;
+    ctx.fillStyle = `rgb(${box.fg.join(',')})`;
+
+    // 3. 排版与居中计算
+    const spacing = state.spacing * (fontSize / 100); // 相对字距
+    const textWidth = getTextWidth(text, spacing);
+    
+    // 原框中心点 + 手动偏移
+    const centerX = box.x0 + box.w / 2 + state.offsetX;
+    const centerY = box.y0 + box.h / 2 + state.offsetY;
+
+    // 起点 X（向左推半个总宽度）
+    const startX = centerX - textWidth / 2;
+
+    // 绘制新文字
+    drawTextWithSpacing(text, startX, centerY, spacing);
+  }
+
+  // ================= OCR 识别引擎 =================
+  async function runOCR() {
+    // 1. 预处理图片（放大以提高 OCR 精度）
+    const ocrMax = 2000;
+    const os = Math.min(1.5, ocrMax / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
-    oc.width  = Math.max(1, Math.round(state.W * os));
+    oc.width = Math.max(1, Math.round(state.W * os));
     oc.height = Math.max(1, Math.round(state.H * os));
     const octx = oc.getContext('2d');
     octx.drawImage(state.img, 0, 0, oc.width, oc.height);
@@ -371,267 +301,214 @@
       worker = await Tesseract.createWorker('eng', 1, {
         logger: m => {
           if (m.status === 'recognizing text') {
-            setProgress(m.progress || 0);
-            setStatus('识别中… ' + Math.round((m.progress || 0) * 100) + '%');
-          } else {
-            setStatus('正在加载 OCR 引擎…');
+            emptyEl.innerHTML = `<div>识别中... ${Math.round(m.progress*100)}%</div>`;
           }
         }
       });
     }
 
+    // 限制只识别数字和符号
+    await worker.setParameters({
+      tessedit_char_whitelist: '0123456789.,+$%',
+    });
+
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    const words = (data.words || [])
-      .filter(w => {
-        const t = (w.text || '').trim();
-        if (!t) return false;
-        if (w.confidence < 35) return false;
-        const digits = (t.match(/[0-9]/g) || []).length;
-        return digits > 0 && digits / t.length >= 0.5;
-      })
-      .map(w => ({
-        x0: w.bbox.x0 * sc,
-        y0: w.bbox.y0 * sc,
-        x1: w.bbox.x1 * sc,
-        y1: w.bbox.y1 * sc
-      }));
+    // 获取所有识别出的文本块
+    const words = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 20);
+    
+    // 合并相邻的数字
+    const boxes = [];
+    for (const w of words) {
+      const box = {
+        x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
+        x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
+      };
+      box.w = box.x1 - box.x0;
+      box.h = box.y1 - box.y0;
+      
+      // 如果高度太小，可能是噪点
+      if (box.h < 10 || box.w < 10) continue;
 
-    return groupWords(words);
-  }
-
-  /* ================= 绘制 ================= */
-
-  function pickTargets() {
-    const gs = state.groups;
-    if (!gs.length) return [];
-    if (state.onlyLargest && gs.length > 1) {
-      return [gs.reduce((a, b) => (b.w * b.h > a.w * a.h ? b : a))];
-    }
-    return gs;
-  }
-
-  function drawGroup(g, data, W, H) {
-    const padX = Math.max(2, Math.min(g.w * 0.10, g.h * 0.28));
-    const padY = Math.max(2, Math.min(g.h * 0.18, g.h * 0.42));
-    const bx = Math.max(0, Math.floor(g.x0 - padX));
-    const by = Math.max(0, Math.floor(g.y0 - padY));
-    const bw = Math.min(W - bx, Math.ceil(g.w + padX * 2));
-    const bh = Math.min(H - by, Math.ceil(g.h + padY * 2));
-    if (bw < 2 || bh < 2) return;
-
-    const bg = sampleBg(bx, by, bw, bh, data, W, H);
-    ctx.fillStyle = 'rgb(' + bg.join(',') + ')';
-    ctx.fillRect(bx, by, bw, bh);
-
-    const fg = sampleFg(g.x0, g.y0, g.w, g.h, data, bg, W, H);
-
-    const text = state.newText;
-    let fs = g.h * state.sizeScale;
-
-    ctx.font = fs + 'px ' + state.font;
-    let tw = ctx.measureText(text).width;
-    const maxW = g.w * 1.18 + 6;
-    if (tw > maxW && tw > 0) {
-      fs *= maxW / tw;
-    }
-    fs = Math.max(6, Math.min(fs, bh * 1.0));
-    ctx.font = fs + 'px ' + state.font;
-
-    ctx.fillStyle = 'rgb(' + fg.join(',') + ')';
-    ctx.textAlign = state.align;
-    ctx.textBaseline = 'middle';
-
-    let tx = g.x0 + g.w / 2;
-    if (state.align === 'left')  tx = g.x0;
-    if (state.align === 'right') tx = g.x1;
-    const ty = g.y0 + g.h / 2;
-
-    ctx.fillText(text, tx, ty);
-  }
-
-  function renderResult() {
-    if (!state.img) return;
-    const W = state.W, H = state.H;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(state.img, 0, 0, W, H);
-
-    if (state.groups.length) {
-      let data = null;
-      try { data = ctx.getImageData(0, 0, W, H).data; } catch (e) { data = null; }
-      if (data) {
-        const targets = pickTargets();
-        for (let i = 0; i < targets.length; i++) {
-          drawGroup(targets[i], data, W, H);
+      // 尝试与上一个合并（如果在同一水平线）
+      if (boxes.length > 0) {
+        const prev = boxes[boxes.length - 1];
+        const overlapY = Math.min(prev.y1, box.y1) - Math.max(prev.y0, box.y0);
+        if (overlapY > Math.min(prev.h, box.h) * 0.5) {
+          // 合并
+          prev.x0 = Math.min(prev.x0, box.x0);
+          prev.x1 = Math.max(prev.x1, box.x1);
+          prev.y0 = Math.min(prev.y0, box.y0);
+          prev.y1 = Math.max(prev.y1, box.y1);
+          prev.w = prev.x1 - prev.x0;
+          prev.h = prev.y1 - prev.y0;
+          continue;
         }
       }
+      boxes.push(box);
     }
 
-    for (let i = 0; i < state.manualOps.length; i++) {
-      const m = state.manualOps[i];
-      ctx.save();
-      ctx.font = m.size + 'px ' + state.font;
-      ctx.fillStyle = m.color;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(m.text, m.x, m.y);
-      ctx.restore();
+    // 如果没有识别出大块，就把整个图当作一个框
+    if (boxes.length === 0) {
+      boxes.push({ x0: state.W*0.1, y0: state.H*0.1, x1: state.W*0.9, y1: state.H*0.9, w: state.W*0.8, h: state.H*0.8 });
     }
+
+    // 分析每个框的色彩
+    const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
+    return boxes.map(box => {
+      const colors = analyzeRegion(box, imgData, state.W, state.H);
+      return { ...box, ...colors };
+    });
   }
 
-  /* ================= 主流程 ================= */
-
+  // ================= 事件绑定 =================
   async function handleFile(file) {
-    if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
-    if (state.busy) return;
+    if (!file || !file.type.startsWith('image/')) return;
+    
+    emptyEl.style.display = 'block';
+    emptyEl.innerHTML = `<div>正在读取...</div>`;
+    canvas.style.display = 'none';
 
-    state.busy = true;
-    state.groups = [];
-    state.manualOps = [];
-    showProgress('正在加载图片…');
-
-    try {
-      const im = await loadImageFile(file);
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    
+    im.onload = async () => {
       state.img = im;
-
-      const maxSide = 1800;
-      const scale = Math.min(1, maxSide / Math.max(im.naturalWidth, im.naturalHeight));
-      state.W = Math.max(1, Math.round(im.naturalWidth * scale));
-      state.H = Math.max(1, Math.round(im.naturalHeight * scale));
-
+      const maxSide = 2000;
+      const scale = Math.min(1, maxSide / Math.max(im.width, im.height));
+      state.W = Math.round(im.width * scale);
+      state.H = Math.round(im.height * scale);
+      
       canvas.width = state.W;
       canvas.height = state.H;
       ctx.drawImage(im, 0, 0, state.W, state.H);
+      
+      try {
+        state.boxes = await runOCR();
+        
+        // 默认选中面积最大的那个框
+        if (state.boxes.length > 0) {
+          let maxArea = 0, maxIdx = 0;
+          state.boxes.forEach((b, i) => {
+            if (b.w * b.h > maxArea) { maxArea = b.w * b.h; maxIdx = i; }
+          });
+          state.activeBoxIndex = maxIdx;
+        }
 
-      emptyEl.style.display = 'none';
-      canvas.style.display = 'block';
-      downloadBtn.disabled = false;
-
-      showProgress('正在识别数字…');
-      state.groups = await runOCR();
-      hideProgress();
-      renderResult();
-
-      if (!state.groups.length) {
-        setStatus('未识别到数字，试试更清晰的图，或勾选「手动点击补写数字」');
-        progressWrap.style.display = 'flex';
-        setTimeout(() => { hideProgress(); }, 4500);
+        state.offsetX = 0;
+        state.offsetY = 0;
+        renderResult();
+        
+        emptyEl.style.display = 'none';
+        canvas.style.display = 'block';
+        canvas.focus();
+        downloadBtn.disabled = false;
+        
+      } catch (err) {
+        alert("识别失败，请重试");
+        emptyEl.innerHTML = `<div>识别失败，请重试</div>`;
       }
-    } catch (err) {
-      console.error(err);
-      hideProgress();
-      alert('处理失败：' + err.message);
-    } finally {
-      state.busy = false;
-    }
+      URL.revokeObjectURL(url);
+    };
+    im.src = url;
   }
 
-  /* ================= 事件绑定 ================= */
-
-  uploadBtn.addEventListener('click', () => fileInput.click());
-  emptyEl.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', e => {
-    const f = e.target.files && e.target.files[0];
-    if (f) handleFile(f);
+  $('uploadBtn').onclick = () => fileInput.click();
+  emptyEl.onclick = () => fileInput.click();
+  
+  fileInput.onchange = e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
     fileInput.value = '';
-  });
+  };
 
-  clearBtn.addEventListener('click', () => {
-    state.img = null;
-    state.groups = [];
-    state.manualOps = [];
-    canvas.style.display = 'none';
-    emptyEl.style.display = 'block';
-    downloadBtn.disabled = true;
-    hideProgress();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  });
+  // 输入控制
+  textInput.oninput = e => { state.newText = e.target.value; renderResult(); };
+  fontSel.onchange = e => { state.font = e.target.value; renderResult(); };
+  
+  weightRange.oninput = e => {
+    state.weight = parseInt(e.target.value);
+    $('weightVal').textContent = state.weight;
+    renderResult();
+  };
+  
+  spacingRange.oninput = e => {
+    state.spacing = parseFloat(e.target.value);
+    $('spacingVal').textContent = state.spacing;
+    renderResult();
+  };
+  
+  scaleRange.oninput = e => {
+    state.scale = parseInt(e.target.value) / 100;
+    $('scaleVal').textContent = e.target.value + '%';
+    renderResult();
+  };
 
-  downloadBtn.addEventListener('click', () => {
+  // 手动微调：拖拽画布
+  canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = '数字替换_' + Date.now() + '.png';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }, 'image/png');
+    isDragging = true;
+    dragStart = { x: e.clientX, y: e.clientY };
+    canvas.setPointerCapture(e.pointerId);
   });
 
-  textInput.addEventListener('input', e => {
-    state.newText = e.target.value;
-    scheduleRender();
-  });
-
-  fontSel.addEventListener('change', e => {
-    state.font = e.target.value;
-    scheduleRender();
-  });
-
-  sizeRange.addEventListener('input', e => {
-    state.sizeScale = parseFloat(e.target.value);
-    sizeVal.textContent = state.sizeScale.toFixed(2) + '×';
-    scheduleRender();
-  });
-
-  alignSel.addEventListener('change', e => {
-    state.align = e.target.value;
-    scheduleRender();
-  });
-
-  onlyLargest.addEventListener('change', e => {
-    state.onlyLargest = e.target.checked;
-    scheduleRender();
-  });
-
-  manualMode.addEventListener('change', e => {
-    state.manualMode = e.target.checked;
-    canvas.classList.toggle('manual', state.manualMode);
-  });
-
-  canvas.addEventListener('click', e => {
-    if (!state.manualMode || !state.img) return;
-    const r = canvas.getBoundingClientRect();
-    const x = (e.clientX - r.left) * (state.W / r.width);
-    const y = (e.clientY - r.top)  * (state.H / r.height);
-
-    let size = 48;
-    if (state.groups.length) {
-      size = Math.max.apply(null, state.groups.map(g => g.h)) * state.sizeScale;
-    }
-
-    state.manualOps.push({ x, y, text: state.newText, size, color: '#1a1a1a' });
+  canvas.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    
+    // 将屏幕像素移动转换为画布像素移动
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = state.W / rect.width;
+    const scaleY = state.H / rect.height;
+    
+    state.offsetX += dx * scaleX;
+    state.offsetY += dy * scaleY;
+    
+    dragStart = { x: e.clientX, y: e.clientY };
     renderResult();
   });
 
-  /* 拖拽上传 */
-  ['dragenter', 'dragover'].forEach(t => {
-    document.addEventListener(t, e => {
+  canvas.addEventListener('pointerup', e => {
+    isDragging = false;
+    canvas.releasePointerCapture(e.pointerId);
+  });
+
+  // 手动微调：键盘方向键
+  canvas.addEventListener('keydown', e => {
+    if (!state.img) return;
+    const step = e.shiftKey ? 10 : 1; // 按住 Shift 加速
+    let moved = false;
+    
+    if (e.key === 'ArrowLeft') { state.offsetX -= step; moved = true; }
+    if (e.key === 'ArrowRight') { state.offsetX += step; moved = true; }
+    if (e.key === 'ArrowUp') { state.offsetY -= step; moved = true; }
+    if (e.key === 'ArrowDown') { state.offsetY += step; moved = true; }
+    
+    if (moved) {
       e.preventDefault();
-      stage.classList.add('dragover');
-    });
+      renderResult();
+    }
   });
-  ['dragleave', 'drop'].forEach(t => {
-    document.addEventListener(t, e => {
-      e.preventDefault();
-      if (t === 'drop' || e.target === document.documentElement) {
-        stage.classList.remove('dragover');
-      }
-    });
-  });
-  document.addEventListener('drop', e => {
-    e.preventDefault();
-    stage.classList.remove('dragover');
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  });
+
+  downloadBtn.onclick = () => {
+    if (!state.img) return;
+    canvas.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '完美改数字_' + Date.now() + '.png';
+      a.click();
+    }, 'image/png');
+  };
+
+  // 拖拽支持
+  ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => {
+    e.preventDefault(); stage.style.border = '2px dashed #3b82f6';
+  }));
+  ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => {
+    e.preventDefault(); stage.style.border = 'none';
+    if (t === 'drop' && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  }));
 
 })();
 </script>
