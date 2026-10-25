@@ -311,7 +311,7 @@
 
       if (['time','orderId','account'].includes(box.type)) {
         // 左对齐行：从基准线左缘擦起（仅留 2px 抗锯齿余量，绝不触碰左侧标签）
-        eraseL = state.baseX - 2;
+        eraseL = state.baseX + 4;
         // 右边界：取原内容右缘与新文本实际宽度 + 余量的最大值
         eraseR = Math.max(box.eraseX + box.eraseW + 8, eraseL + tw + 12);
       } else {
@@ -375,7 +375,7 @@
     const sc = state.W / oc.width;
 
     const validWords = (data.words || []).filter(w =>
-      w.text.trim().length > 0 && w.confidence > 25
+      w.text.trim().length > 0 && w.confidence > 15
     ).map(w => ({
       x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
       x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
@@ -391,110 +391,156 @@
     const lines = mergeWordsByLine(filteredWords);
 
     let amountBox = null, timeBox = null, orderBox = null, accountBox = null, nameBox = null;
-    let labelMaxX1 = 0; // 标签列右边缘（用于校准 baseX，保护标签不被擦除）
+    let labelMaxX1 = 0;
     const labelKeywords = ['创建','时间','收款','理由','对方','账户','订单','单号','备注','分类','标签'];
+    const H = state.H, W = state.W;
 
-    // ---- 金额：含 + 或 . 且字号最大 ----
+    // ---- 金额识别：多模式匹配 + 合理性校验（核心修复：OCR常漏识别大字号金额） ----
+    // 模式1：含"+"的行（最可靠）
     lines.forEach(line => {
-      if ((line.text.includes('+') || line.text.includes('.')) && line.h > 20) {
-        const area = line.w * line.h;
-        if (!amountBox || area > amountBox.w * amountBox.h) amountBox = line;
+      if (line.text.includes('+') && line.h > 15) {
+        if (!amountBox || line.h > amountBox.h) amountBox = line;
       }
     });
+    // 模式2：含逗号+点的数字行（如 6,750.00）
+    if (!amountBox) {
+      lines.forEach(line => {
+        if (line.text.includes(',') && line.text.includes('.') && /\d/.test(line.text) && line.h > 15) {
+          if (!amountBox || line.h > amountBox.h) amountBox = line;
+        }
+      });
+    }
+    // 模式3：全页字号最大且含数字的行
+    if (!amountBox) {
+      let maxH = 0;
+      lines.forEach(l => { if (l.h > maxH) maxH = l.h; });
+      lines.forEach(line => {
+        if (line.h >= maxH * 0.8 && /\d/.test(line.text)) {
+          if (!amountBox || line.h > amountBox.h) amountBox = line;
+        }
+      });
+    }
+    // 合理性校验：金额垂直中心应在 H*0.15 ~ H*0.38 之间
+    if (amountBox) {
+      const cy = (amountBox.y0 + amountBox.y1) / 2;
+      if (cy < H * 0.15 || cy > H * 0.38) amountBox = null;
+    }
+    // 最终兜底：固定比例（标准账单布局：金额居中，约22%高度处）
+    if (!amountBox) {
+      amountBox = { x0: W*0.275, y0: H*0.197, x1: W*0.725, y1: H*0.243, w: W*0.45, h: H*0.046, text: '' };
+    }
+    const amtCy = (amountBox.y0 + amountBox.y1) / 2;
+    const rowGap = Math.max(amountBox.h * 0.55, H * 0.022); // 行间距
 
-    const amountY1 = amountBox ? amountBox.y1 : state.H * 0.3;
-
-    // ---- 在金额下方区域识别各信息行 ----
-    const belowAmount = lines.filter(l => l.y0 > amountY1);
-
-    belowAmount.forEach(line => {
-      const t = line.text;
-      // 标签检测基于单个词块（parts），记录标签列右边缘；整行仍继续参与内容识别
-      if (line.parts) {
+    // ---- 标签检测（纯标签词，不含数字/符号） ----
+    lines.forEach(line => {
+      if ((line.y0 + line.y1)/2 > amtCy && line.parts) {
         line.parts.forEach(p => {
-          if (labelKeywords.some(k => p.text.includes(k))) {
+          const isPureLabel = !/[\d:@\-+.]/.test(p.text) && p.text.length <= 6;
+          if (isPureLabel && labelKeywords.some(k => p.text.includes(k))) {
             labelMaxX1 = Math.max(labelMaxX1, p.x1);
           }
         });
       }
-      // 账户：含 @ 或 *
-      if (t.includes('@') || t.includes('*')) {
-        if (!accountBox || line.w > accountBox.w) accountBox = line;
+    });
+
+    // ---- 各行预期垂直中心（基于金额位置推算，行间固定间距） ----
+    // 各行垂直中心 = 金额中心 + 图片高度固定比例（从标准账单实测，杜绝间距误差）
+    const expTimeCy   = amtCy + H * 0.070;  // 创建时间行
+    const expAcctCy   = amtCy + H * 0.168;  // 对方账户行
+    const expOrderCy  = amtCy + H * 0.202;  // 订单号行
+    const expNameCy   = amountBox.y0 - rowGap * 1.4;
+    const tol = H * 0.055; // 位置容差
+
+    // ---- 在金额下方按位置约束识别各行 ----
+    const belowLines = lines.filter(l => (l.y0 + l.y1)/2 > amtCy + amountBox.h * 0.4);
+    belowLines.forEach(line => {
+      const cy = (line.y0 + line.y1) / 2;
+      const t = line.text;
+      // 账户：含@或*，且位置在预期账户行附近
+      if ((t.includes('@') || t.includes('*')) && Math.abs(cy - expAcctCy) < tol * 1.6) {
+        if (!accountBox || Math.abs(cy - expAcctCy) < Math.abs(((accountBox.y0+accountBox.y1)/2) - expAcctCy))
+          accountBox = line;
         return;
       }
-      // 订单号：纯数字（允许 OCR 把 0/1 误识别为 O/I/l）>=15 位
+      // 订单号：纯数字（含OCR容错）>=15位，位置在预期订单行附近
       const digitsOnly = t.replace(/[OIlSz]/g, ch => ({O:'0',I:'1',l:'1',S:'5',z:'2'}[ch]));
-      if (/^\d{15,}$/.test(digitsOnly)) {
-        if (!orderBox || line.w > orderBox.w) orderBox = line;
+      if (/^\d{15,}$/.test(digitsOnly) && Math.abs(cy - expOrderCy) < tol * 1.0) {
+        if (!orderBox || Math.abs(cy - expOrderCy) < Math.abs(((orderBox.y0+orderBox.y1)/2) - expOrderCy))
+          orderBox = line;
         return;
       }
-      // 时间：含 : 和 -，且在金额下方（硬约束，杜绝顶部状态栏误识别）
-      if (t.includes(':') && (t.includes('-') || t.includes('/'))) {
-        // 优先选择含完整年份（4位数字开头）的行
-        const hasFullDate = /^\d{4}[-/]/.test(t);
-        if (!timeBox || (hasFullDate && !timeBox._full) ||
-            (hasFullDate === !!timeBox._full && line.w > timeBox.w)) {
-          timeBox = { ...line, _full: hasFullDate };
-        }
+      // 时间：含:和-或/，位置在预期时间行附近
+      if (t.includes(':') && (t.includes('-') || t.includes('/')) && Math.abs(cy - expTimeCy) < tol * 1.6) {
+        if (!timeBox || Math.abs(cy - expTimeCy) < Math.abs(((timeBox.y0+timeBox.y1)/2) - expTimeCy))
+          timeBox = line;
       }
     });
 
-    // ---- 兜底：位置硬推算（基于金额和已识别行） ----
-    if (amountBox) {
-      if (!timeBox) {
-        timeBox = {
-          x0: state.W * 0.28, y0: amountBox.y1 + amountBox.h * 1.2,
-          x1: state.W * 0.75, y1: amountBox.y1 + amountBox.h * 2.2,
-          w: state.W * 0.47, h: amountBox.h * 0.45, text: ''
-        };
-      }
-      if (!orderBox) {
-        const refY = accountBox ? accountBox.y1 : timeBox.y1;
-        orderBox = {
-          x0: timeBox.x0, y0: refY + timeBox.h * 1.5,
-          x1: state.W * 0.95, y1: refY + timeBox.h * 2.5,
-          w: state.W * 0.6, h: timeBox.h, text: ''
-        };
-      }
-      if (!accountBox) {
-        accountBox = {
-          x0: timeBox.x0, y0: timeBox.y1 + timeBox.h * 1.5,
-          x1: state.W * 0.8, y1: timeBox.y1 + timeBox.h * 2.5,
-          w: state.W * 0.5, h: timeBox.h, text: ''
-        };
+    // ---- 固定比例兜底（OCR失效时启用，基于金额位置推算） ----
+    const mkRow = (cy, wRatio) => ({ x0: Math.max(labelMaxX1 + 10, W*0.26), y0: cy - H*0.013,
+      x1: W * (0.26 + wRatio), y1: cy + H*0.013, w: W * wRatio, h: H * 0.026, text: '' });
+    if (!timeBox)  timeBox  = mkRow(expTimeCy, 0.52);
+    if (!accountBox) accountBox = mkRow(expAcctCy, 0.52);
+    if (!orderBox) orderBox = mkRow(expOrderCy, 0.68);
+    // ---- 后处理校验：订单号必须在账户行下方，否则用兜底位置 ----
+    if (orderBox && accountBox) {
+      const ordCy = (orderBox.y0 + orderBox.y1) / 2;
+      const acctCy = (accountBox.y0 + accountBox.y1) / 2;
+      if (ordCy < acctCy) {
+        orderBox = { x0: Math.max(labelMaxX1 + 10, W*0.26), y0: expOrderCy - H*0.013,
+          x1: W * 0.94, y1: expOrderCy + H*0.013, w: W * 0.68, h: H * 0.026, text: '' };
       }
     }
 
-    // ---- 顶部姓名（金额上方、居中的小字） ----
-    if (amountBox) {
-      let best = null, bestDist = 9999;
-      lines.forEach(line => {
-        if (line.y1 < amountBox.y0 && line.h < amountBox.h * 0.7 && line.h > 8) {
-          // 与金额水平中心接近
-          const lineCx = (line.x0 + line.x1) / 2;
-          const amtCx = (amountBox.x0 + amountBox.x1) / 2;
-          if (Math.abs(lineCx - amtCx) < amountBox.w * 0.6) {
-            const dist = amountBox.y0 - line.y1;
-            if (dist < amountBox.h * 2.5 && dist < bestDist) {
-              bestDist = dist; best = line;
-            }
-          }
+    // ---- 顶部姓名：金额上方居中 ----
+    let bestDist = 9999;
+    lines.forEach(line => {
+      const cy = (line.y0 + line.y1) / 2;
+      if (cy < amtCy && line.h < amountBox.h * 0.7 && line.h > 8) {
+        const lineCx = (line.x0 + line.x1) / 2;
+        if (Math.abs(lineCx - W*0.5) < W*0.22) {
+          const dist = Math.abs(cy - expNameCy);
+          if (dist < H*0.06 && dist < bestDist) { bestDist = dist; nameBox = line; }
         }
-      });
-      nameBox = best;
-    }
+      }
+    });
+    if (!nameBox) nameBox = { x0: W*0.38, y0: expNameCy - H*0.011, x1: W*0.62, y1: expNameCy + H*0.011, w: W*0.24, h: H*0.022, text: '' };
 
-    // ---- 校准 baseX（内容列左边缘 = 标签右边缘 + 间距） ----
+    // ---- 校准 baseX（内容列左边缘 = 标签右边缘 + 间距），并加强上下限安全约束 ----
+    const minBaseX = state.W * 0.26;  // 内容列不可能太靠左
+    const maxBaseX = state.W * 0.45;  // 内容列不可能超过45%宽度（否则就是识别错了）
     if (labelMaxX1 > 0 && timeBox) {
-      state.baseX = labelMaxX1 + Math.round(timeBox.h * 1.0);
+      state.baseX = labelMaxX1 + Math.round(timeBox.h * 1.4);
     } else if (timeBox) {
       const analyzedT = analyzeRegion(timeBox, ctx.getImageData(0,0,state.W,state.H).data, state.W, state.H);
       state.baseX = analyzedT.inkX0;
     } else {
       state.baseX = state.W * 0.28;
     }
+    // 安全回退：若 baseX 超出合理范围，用时间/账户行的墨迹左边缘重新校准
+    if (state.baseX < minBaseX || state.baseX > maxBaseX) {
+      const refBox = timeBox || accountBox || orderBox;
+      if (refBox) {
+        const analyzed = analyzeRegion(refBox, ctx.getImageData(0,0,state.W,state.H).data, state.W, state.H);
+        // 内容行墨迹左边缘即为 baseX（标签在更左，墨迹起点就是内容起点）
+        state.baseX = Math.max(minBaseX, Math.min(maxBaseX, analyzed.inkX0));
+      } else {
+        state.baseX = state.W * 0.28;
+      }
+    }
 
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
+    // ---- 强制位置校准：左对齐三行位置由金额固定比例推算，彻底杜绝OCR定位错误 ----
+    const forceRowPos = (box, cy, wRatio) => {
+      if (!box) return null;
+      const rx0 = Math.max(state.baseX - 5, W * 0.26);
+      return Object.assign({}, box, { x0: rx0, y0: cy - H * 0.014, x1: rx0 + W * wRatio,
+               y1: cy + H * 0.014, w: W * wRatio, h: H * 0.028 });
+    };
+    timeBox = forceRowPos(timeBox, expTimeCy, 0.55);
+    accountBox = forceRowPos(accountBox, expAcctCy, 0.55);
+    orderBox = forceRowPos(orderBox, expOrderCy, 0.70);
     const regions = [];
     const addRegion = (box, type) => {
       if (!box) return;
