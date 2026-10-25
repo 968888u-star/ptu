@@ -27,9 +27,9 @@
 
   /* 左侧面板 */
   .panel {
-    width: 360px; flex: none; padding: 24px 20px;
+    width: 370px; flex: none; padding: 24px 20px;
     background: var(--panel); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
   }
   .brand h1 { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
   .brand p { font-size: 12px; color: var(--subtext); margin-top: 4px; }
@@ -45,7 +45,7 @@
   
   input[type="text"] {
     background: #1b1f2a; border: 1px solid var(--border); color: #fff;
-    border-radius: 8px; padding: 10px 14px; font-size: 15px; width: 100%; outline: none;
+    border-radius: 8px; padding: 10px 14px; font-size: 14px; width: 100%; outline: none;
     font-family: inherit; transition: 0.2s;
   }
   input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
@@ -59,7 +59,8 @@
   button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
   
   button.success {
-    background: var(--success); font-size: 14px; padding: 12px;
+    background: var(--success); font-size: 15px; padding: 14px;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
   }
   button.success:hover { background: #059669; }
 
@@ -92,7 +93,8 @@
   #toast {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
     background: var(--success); color: #fff; padding: 8px 16px; border-radius: 20px;
-    font-size: 13px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 10;
+    font-size: 14px; font-weight: bold; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 </style>
 </head>
@@ -101,8 +103,8 @@
   <aside class="panel">
     <header class="brand">
       <h1>账单防骗科普生成器</h1>
-      <p>专为演示教学打造 · 修复黑块与截断Bug</p>
-      <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限教学演示使用。</div>
+      <p>专为演示教学打造 · 全自动套牌替换</p>
+      <div class="warning">⚠️ 严禁将此工具用于伪造交易记录、诈骗等违法行为，仅限反诈教学演示使用。</div>
     </header>
 
     <button class="primary" id="uploadBtn">1. 上传原始账单截图</button>
@@ -112,9 +114,11 @@
       <input type="text" id="inputAmount" placeholder="金额 (例如: +6,750.00)" spellcheck="false">
       <input type="text" id="inputTime" placeholder="时间 (例如: 2026-06-18 23:28:59)" spellcheck="false">
       <input type="text" id="inputOrderId" placeholder="订单号" spellcheck="false">
+      <input type="text" id="inputName" placeholder="顶部名字 (如: 王志铭2 >)" spellcheck="false">
+      <input type="text" id="inputAccount" placeholder="对方账户 (含邮箱)" spellcheck="false">
     </div>
 
-    <button class="primary success" id="generateBtn">✨ 一键生成演示数据</button>
+    <button class="primary success" id="generateBtn">✨ 一键全套随机生成</button>
 
     <div class="group">
       <div class="glabel">全局字体微调</div>
@@ -135,10 +139,10 @@
   </aside>
 
   <main class="stage" id="stage">
-    <div id="toast">✅ 演示数据已生成</div>
+    <div id="toast">✅ 全套演示数据已生成</div>
     <div class="empty" id="empty">
       <div style="font-size:48px;margin-bottom:12px">📱</div>
-      <div>点击上传账单截图，自动提取金额/时间/单号</div>
+      <div>点击上传账单截图，自动提取核心信息</div>
     </div>
     <canvas id="cv" tabindex="0"></canvas>
   </main>
@@ -160,6 +164,8 @@
   const inputAmount = $('inputAmount');
   const inputTime = $('inputTime');
   const inputOrderId = $('inputOrderId');
+  const inputName = $('inputName');
+  const inputAccount = $('inputAccount');
   const generateBtn = $('generateBtn');
   const fontSel = $('fontSel');
   const scaleXRange = $('scaleXRange');
@@ -169,7 +175,7 @@
   const state = {
     img: null, W: 0, H: 0,
     regions: [], 
-    text: { amount: '', time: '', orderId: '' },
+    text: { amount: '', time: '', orderId: '', nameTop: '', account: '' },
     font: 'Inter, sans-serif',
     scaleX: 1
   };
@@ -185,9 +191,8 @@
     setTimeout(() => toast.style.opacity = 0, 2000);
   }
 
-  // ================= 1. 深度图像化验分析 (修复黑块Bug) =================
+  // ================= 1. 深度图像化验分析 =================
   function getRealInkBounds(box, data, W, H) {
-    // 【核心修复】将浮点坐标转为整数，防止 data 数组越界导致背景色变为 NaN/黑色
     const bx0 = Math.floor(box.x0);
     const bx1 = Math.ceil(box.x1);
     const by0 = Math.floor(box.y0);
@@ -196,7 +201,7 @@
     let minX = bx1, maxX = bx0, minY = by1, maxY = by0;
     let fgCount = 0;
     
-    // 采样外围背景
+    // 采样背景
     let rSum=0, gSum=0, bSum=0, cnt=0;
     const pad = 10;
     for(let y=Math.max(0, by0-pad); y<Math.min(H, by1+pad); y++){
@@ -206,10 +211,9 @@
             rSum+=data[i]; gSum+=data[i+1]; bSum+=data[i+2]; cnt++;
         }
     }
-    // 兜底：确保背景色是正常的 RGB 数值
     const outerBg = (cnt > 0 && !isNaN(rSum)) ? [rSum/cnt, gSum/cnt, bSum/cnt] : [255,255,255];
 
-    // 寻找墨迹边界
+    // 寻找真实文字边界
     for (let y = Math.max(0, by0); y < Math.min(H, by1); y++) {
       for (let x = Math.max(0, bx0); x < Math.min(W, bx1); x++) {
         const i = (y * W + x) * 4;
@@ -228,7 +232,7 @@
     const realW = Math.max(1, maxX - minX);
     const realH = Math.max(1, maxY - minY);
     
-    // 提取前景文字色
+    // 提取文字颜色
     const fgPixels = [];
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -253,7 +257,7 @@
     };
   }
 
-  // ================= 2. 高保真绘制 =================
+  // ================= 2. 高保真绘制 (居中自适应) =================
   function getTextWidth(text, letterSpacing) {
     let w = 0;
     for (let i = 0; i < text.length; i++) w += ctx.measureText(text[i]).width + letterSpacing;
@@ -272,51 +276,49 @@
       const text = state.text[box.type];
       if (!text) return; 
 
-      // 覆盖原图 (使用保护机制防止 NaN)
+      // 1. 覆盖原图
       const bgStr = box.bg.map(v => isNaN(v) ? 255 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${bgStr})`;
-      
       const coverPadX = Math.max(2, box.w * 0.05);
       const coverPadY = Math.max(2, box.h * 0.15);
       ctx.fillRect(box.x0 - coverPadX, box.y0 - coverPadY, box.w + coverPadX*2, box.h + coverPadY*2);
 
-      // 计算字号
-      ctx.font = `500 100px ${state.font}`;
+      // 2. 计算字号
+      // 统一使用支持中文的字体序列
+      const fontFam = `"PingFang SC", "Microsoft YaHei", ${state.font}`;
+      ctx.font = `500 100px ${fontFam}`;
       const metrics = ctx.measureText(text);
       const rawH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
       
       let finalFontSize = rawH > 0 ? (box.h / rawH) * 100 : 100;
       
-      const tempSpacing = 0;
-      ctx.font = `500 ${finalFontSize}px ${state.font}`;
-      const testWidth = getTextWidth(text, tempSpacing);
+      ctx.font = `500 ${finalFontSize}px ${fontFam}`;
+      const testWidth = getTextWidth(text, 0);
 
-      // 超长压缩
-      if (testWidth > box.w * 1.05) {
-          finalFontSize = finalFontSize * (box.w * 1.05 / testWidth);
+      // 压缩过长的字符串
+      if (testWidth > box.w * 1.15) {
+          finalFontSize = finalFontSize * (box.w * 1.15 / testWidth);
       }
 
-      ctx.font = `500 ${finalFontSize}px ${state.font}`;
+      // 3. 绘制文字
+      ctx.font = `500 ${finalFontSize}px ${fontFam}`;
       const fgStr = box.fg.map(v => isNaN(v) ? 0 : Math.round(v)).join(',');
       ctx.fillStyle = `rgb(${fgStr})`;
-      ctx.textAlign = 'left';
+      ctx.textAlign = 'center'; // 改为居中对齐，适应变长变短
       ctx.textBaseline = 'middle';
 
-      // 定位
+      // 计算中心点（带手动微调偏移）
+      const centerX = box.x0 + box.w / 2 + (box.offsetX || 0);
       const centerY = box.y0 + box.h / 2 + (box.offsetY || 0);
-      const startX = box.x0 + (box.offsetX || 0);
       
-      // 垂直居中偏移
+      // 垂直居中偏移（针对不同字体的基线差异）
       const yOffset = (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
       
       ctx.save();
-      // 应用全局缩放（从中心点）
-      const centerX = box.x0 + box.w / 2;
       ctx.translate(centerX, centerY);
       ctx.scale(state.scaleX, 1);
-      ctx.translate(-centerX, -centerY);
-      
-      ctx.fillText(text, startX, centerY + yOffset);
+      // 相对于中心点绘制
+      ctx.fillText(text, 0, yOffset);
       ctx.restore();
 
       // 绘制高亮框
@@ -328,7 +330,7 @@
     });
   }
 
-  // ================= 3. 智能识别与分类 (合并长文本) =================
+  // ================= 3. 智能识别与分类 =================
   async function runOCR() {
     const os = Math.min(1.5, 1600 / Math.max(state.W, state.H));
     const oc = document.createElement('canvas');
@@ -339,20 +341,22 @@
     octx.drawImage(state.img, 0, 0, oc.width, oc.height);
 
     if (!worker) {
-      worker = await Tesseract.createWorker('eng', 1, {
+      // 加载中文+英文识别库
+      worker = await Tesseract.createWorker('chi_sim+eng', 1, {
         logger: m => {
           if (m.status === 'recognizing text') {
             emptyEl.innerHTML = `<div>AI 正在精准定位核心数据... ${Math.round(m.progress*100)}%</div>`;
+          } else if (m.status.includes('language') || m.status.includes('initializing')) {
+            emptyEl.innerHTML = `<div>正在加载中文字库(首次需等待)...</div>`;
           }
         }
       });
     }
 
-    await worker.setParameters({ tessedit_char_whitelist: '0123456789+-.:, ' });
     const { data } = await worker.recognize(oc);
     const sc = state.W / oc.width;
 
-    // 1. 提取所有单词并按行合并（解决时间和单号被截断的问题）
+    // 提取并合并同一行的单词
     const rawWords = (data.words || []).filter(w => w.text.trim().length > 0 && w.confidence > 30).map(w => ({
       x0: w.bbox.x0 * sc, y0: w.bbox.y0 * sc,
       x1: w.bbox.x1 * sc, y1: w.bbox.y1 * sc,
@@ -363,9 +367,9 @@
     for (const w of rawWords) {
       let merged = false;
       for (const m of mergedBoxes) {
-        // 如果垂直方向有重叠，且水平方向距离相近，则合并为同一个文本框
         const overlapY = Math.min(m.y1, w.y1) - Math.max(m.y0, w.y0);
-        if (overlapY > Math.min(m.y1-m.y0, w.y1-w.y0) * 0.5) {
+        // 如果垂直方向重叠超过 50%，且水平距离较近（< 100像素），则合并为一行
+        if (overlapY > Math.min(m.y1-m.y0, w.y1-w.y0) * 0.5 && (w.x0 - m.x1 < 100 || m.x0 - w.x1 < 100)) {
             m.x1 = Math.max(m.x1, w.x1);
             m.y0 = Math.min(m.y0, w.y0);
             m.y1 = Math.max(m.y1, w.y1);
@@ -377,53 +381,64 @@
       if (!merged) mergedBoxes.push({ ...w });
     }
 
-    let amountBox = null, timeBox = null, orderBox = null;
+    let amountBox = null, timeBox = null, orderBox = null, accountBox = null;
     let maxAmountArea = 0, maxOrderWidth = 0;
 
-    // 2. 对合并后的文本框进行分类
+    // 第一轮：特征分类
     mergedBoxes.forEach(box => {
       const text = box.text;
       const w = box.x1 - box.x0;
       const h = box.y1 - box.y0;
 
-      // 金额：高度最大，且有小数点或加号
-      if (/\d/.test(text) && (text.includes('.') || text.includes('+'))) {
+      if (/[@*]/.test(text)) {
+        if (!accountBox || w > (accountBox.x1 - accountBox.x0)) accountBox = box;
+      } else if (text.includes(':') || text.includes('-')) {
+        if (!timeBox || w > (timeBox.x1 - timeBox.x0)) timeBox = box;
+      } else if (/^\d{15,}$/.test(text)) {
+        if (w > maxOrderWidth) { maxOrderWidth = w; orderBox = box; }
+      } else if (text.includes('+') || text.includes('.') || (/\d/.test(text) && h > 25)) {
         const area = w * h;
         if (area > maxAmountArea) { maxAmountArea = area; amountBox = box; }
-      } 
-      // 时间：包含 : 或 - 
-      else if (text.includes(':') || text.includes('-')) {
-        if (!timeBox || w > (timeBox.x1 - timeBox.x0)) timeBox = box;
-      } 
-      // 订单号：极其长（超过12位数字）
-      else if (/^\d{12,}$/.test(text)) {
-         if (w > maxOrderWidth) { maxOrderWidth = w; orderBox = box; }
       }
     });
+
+    // 第二轮：寻找顶部名字 (在金额上方且宽度不太大的文本)
+    let nameTopBox = null;
+    if (amountBox) {
+      let minDist = 9999;
+      mergedBoxes.forEach(b => {
+        if (b.y1 < amountBox.y0 && b.x0 > amountBox.x0 && b.x1 < amountBox.x1) {
+            const dist = amountBox.y0 - b.y1;
+            const h = b.y1 - b.y0;
+            // 高度在合理范围内，距离金额较近
+            if (dist < 150 && dist < minDist && h > 10 && h < amountBox.h * 0.8) {
+                minDist = dist;
+                nameTopBox = b;
+            }
+        }
+      });
+    }
 
     const imgData = ctx.getImageData(0, 0, state.W, state.H).data;
     const regions = [];
 
-    if (amountBox) {
-      const b = getRealInkBounds(amountBox, imgData, state.W, state.H);
-      b.type = 'amount'; b.offsetX = 0; b.offsetY = 0;
+    const pushRegion = (box, type) => {
+      if (!box) return;
+      const b = getRealInkBounds(box, imgData, state.W, state.H);
+      b.type = type; b.offsetX = 0; b.offsetY = 0;
       regions.push(b);
-    }
-    if (timeBox) {
-      const b = getRealInkBounds(timeBox, imgData, state.W, state.H);
-      b.type = 'time'; b.offsetX = 0; b.offsetY = 0;
-      regions.push(b);
-    }
-    if (orderBox) {
-      const b = getRealInkBounds(orderBox, imgData, state.W, state.H);
-      b.type = 'orderId'; b.offsetX = 0; b.offsetY = 0;
-      regions.push(b);
-    }
+    };
+
+    pushRegion(amountBox, 'amount');
+    pushRegion(timeBox, 'time');
+    pushRegion(orderBox, 'orderId');
+    pushRegion(accountBox, 'account');
+    pushRegion(nameTopBox, 'nameTop');
 
     return regions;
   }
 
-  // ================= 4. 事件绑定 =================
+  // ================= 4. 事件与数据生成 =================
   async function handleFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     
@@ -448,14 +463,10 @@
       try {
         state.regions = await runOCR();
         
-        // 默认填充
-        if (state.regions.find(r => r.type === 'amount') && !state.text.amount) state.text.amount = '+8,888.88';
-        if (state.regions.find(r => r.type === 'time') && !state.text.time) state.text.time = '2026-06-18 12:00:00';
-        if (state.regions.find(r => r.type === 'orderId') && !state.text.orderId) state.text.orderId = '20260618200040011100410007156705';
-
-        inputAmount.value = state.text.amount;
-        inputTime.value = state.text.time;
-        inputOrderId.value = state.text.orderId;
+        // 智能默认回填（为防误触，先清空输入框，等待用户点生成或自行修改）
+        state.text = { amount: '', time: '', orderId: '', nameTop: '', account: '' };
+        inputAmount.value = ''; inputTime.value = ''; inputOrderId.value = '';
+        inputName.value = ''; inputAccount.value = '';
 
         renderResult();
         
@@ -463,6 +474,7 @@
         canvas.style.display = 'block';
         canvas.focus();
         downloadBtn.disabled = false;
+        generateBtn.click(); // 上传完成后直接触发一次全套生成，方便老师直接看到效果
         
       } catch (err) {
         alert("识别失败，请刷新重试");
@@ -473,31 +485,56 @@
     im.src = url;
   }
 
+  // 全套随机生成器
   generateBtn.onclick = () => {
     if (!state.img) return alert("请先上传图片！");
     
+    // 1. 随机金额
     const money = (Math.random() * 9000 + 100).toFixed(2);
     const amountStr = `+${Number(money).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     
+    // 2. 随机时间
     const d = new Date(Date.now() - Math.random() * 100000000);
     const p = n => n.toString().padStart(2, '0');
     const timeStr = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 
+    // 3. 随机单号 (沿用日期前缀)
     let orderStr = d.getFullYear().toString() + p(d.getMonth()+1) + p(d.getDate());
-    while (orderStr.length < 28) orderStr += Math.floor(Math.random() * 10);
+    while (orderStr.length < 30) orderStr += Math.floor(Math.random() * 10);
     
+    // 4. 随机名字与账户
+    const firsts = '赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜';
+    const seconds = ['伟','芳','娜','敏','静','丽','强','磊','军','洋','勇','艳','杰','娟','涛','明','超','秀兰','霞','平','刚','桂英','子涵','浩宇','雨桐','梓萱'];
+    const randomName = firsts[Math.floor(Math.random()*firsts.length)] + seconds[Math.floor(Math.random()*seconds.length)] + (Math.random()>0.5?seconds[Math.floor(Math.random()*seconds.length)]:'') + Math.floor(Math.random()*10);
+    
+    // 5. 组合账户名和名字
+    const maskChars = 'abcdefghijklmnopqrstuvwxyz';
+    const mask = Array.from({length:3}, () => maskChars[Math.floor(Math.random()*26)]).join('');
+    const domains = ['@163.com', '@qq.com', '@126.com', '@gmail.com'];
+    const domain = domains[Math.floor(Math.random()*domains.length)];
+    
+    const accountStr = `${randomName} ${mask}***${domain}`;
+    // 顶部名字通常自带一个箭头
+    const nameTopStr = `${randomName} >`;
+
+    // 更新状态和 UI
     state.text.amount = amountStr;
     state.text.time = timeStr;
     state.text.orderId = orderStr;
+    state.text.nameTop = nameTopStr;
+    state.text.account = accountStr;
 
     inputAmount.value = amountStr;
     inputTime.value = timeStr;
     inputOrderId.value = orderStr;
+    inputName.value = nameTopStr;
+    inputAccount.value = accountStr;
 
     renderResult();
-    showToast('✅ 演示数据已生成');
+    showToast('✨ 全套演示数据已生成');
   };
 
+  // UI 绑定
   $('uploadBtn').onclick = () => fileInput.click();
   emptyEl.onclick = () => fileInput.click();
   fileInput.onchange = e => {
@@ -508,11 +545,13 @@
   inputAmount.oninput = e => { state.text.amount = e.target.value; renderResult(); };
   inputTime.oninput = e => { state.text.time = e.target.value; renderResult(); };
   inputOrderId.oninput = e => { state.text.orderId = e.target.value; renderResult(); };
+  inputName.oninput = e => { state.text.nameTop = e.target.value; renderResult(); };
+  inputAccount.oninput = e => { state.text.account = e.target.value; renderResult(); };
   
   fontSel.onchange = e => { state.font = e.target.value; renderResult(); };
   scaleXRange.oninput = e => { state.scaleX = parseInt(e.target.value)/100; $('scaleXVal').textContent = e.target.value + '%'; renderResult(); };
 
-  // 鼠标拖拽微调区域位置
+  // 鼠标拖拽微调
   canvas.addEventListener('pointerdown', e => {
     if (!state.img) return;
     const rect = canvas.getBoundingClientRect();
